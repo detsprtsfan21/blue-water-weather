@@ -1,0 +1,1426 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <meta name="theme-color" content="#070d14" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="manifest" href="manifest.json" />
+  <title>Blue Water &amp; Thumb Weather + Jet Stream Command</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+
+  <style>
+    :root {
+      --bg: #070d14;
+      --panel: rgba(17, 27, 39, 0.90);
+      --panel-soft: rgba(25, 39, 56, 0.74);
+      --border: rgba(56, 189, 248, 0.18);
+      --border-strong: rgba(56, 189, 248, 0.36);
+      --text: #f0f6fc;
+      --muted: #98aec4;
+      --accent: #38bdf8;
+      --accent-2: #818cf8;
+      --warn: #f59e0b;
+      --alert: #f43f5e;
+      --ok: #10b981;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, sans-serif;
+      background:
+        radial-gradient(circle at 15% 0%, rgba(56, 189, 248, 0.14), transparent 42%),
+        radial-gradient(circle at 85% 10%, rgba(129, 140, 248, 0.12), transparent 40%),
+        var(--bg);
+      color: var(--text);
+      padding: 14px;
+      line-height: 1.5;
+    }
+    .wrap { max-width: 1180px; margin: 0 auto; }
+
+    /* Header & App Navigation Bar */
+    header {
+      display: flex; flex-wrap: wrap; justify-content: space-between;
+      align-items: center; gap: 12px; margin-bottom: 14px;
+    }
+    h1 {
+      font-size: 1.38rem; margin: 0 0 3px 0; letter-spacing: -0.02em;
+      background: linear-gradient(90deg, #f8fafc, #7dd3fc);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    h2 {
+      font-size: 1.05rem; margin: 20px 0 10px 0;
+      display: flex; align-items: center; gap: 8px; color: #e2edf8;
+    }
+    .sub { color: var(--muted); font-size: 0.86rem; }
+
+    .nav-tabs {
+      display: flex; gap: 8px; background: var(--panel);
+      padding: 5px; border-radius: 12px; border: 1px solid var(--border-strong);
+    }
+    .nav-tab {
+      background: transparent; border: none; color: var(--muted);
+      padding: 8px 14px; border-radius: 8px; font-weight: 700;
+      font-size: 0.88rem; cursor: pointer; transition: all 0.2s;
+    }
+    .nav-tab.active {
+      background: linear-gradient(135deg, #0284c7, #2563eb);
+      color: #ffffff; box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);
+    }
+
+    .view-section { display: none; }
+    .view-section.active { display: block; }
+
+    /* Active Severe Weather Alert Banner */
+    .alert-banner {
+      display: none;
+      background: rgba(244, 63, 94, 0.16);
+      border: 1px solid rgba(244, 63, 94, 0.55);
+      border-radius: 12px;
+      padding: 11px 14px;
+      margin-bottom: 12px;
+      color: #ffe4e6;
+      font-size: 0.88rem;
+    }
+    .alert-banner.visible { display: block; }
+    .alert-banner strong { color: #fda4af; text-transform: uppercase; letter-spacing: 0.04em; }
+
+    /* Controls */
+    .controls {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
+      background: var(--panel); backdrop-filter: blur(12px);
+      border: 1px solid var(--border-strong);
+      padding: 12px 14px; border-radius: 14px; margin-bottom: 12px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+    }
+    .input-group { display: flex; flex-direction: column; gap: 3px; }
+    .input-group label {
+      font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em;
+      color: var(--muted); font-weight: 700;
+    }
+    input, select, button {
+      background: #172434; color: var(--text); border: 1px solid var(--border);
+      padding: 8px 11px; border-radius: 9px; font-size: 0.92rem;
+    }
+    input:focus, select:focus { outline: none; border-color: var(--accent); }
+    input[type="text"].zip-in { width: 115px; font-weight: 700; letter-spacing: 1px; }
+    button.primary {
+      background: linear-gradient(135deg, #0284c7, #2563eb);
+      border-color: transparent; font-weight: 700; cursor: pointer; padding: 9px 15px;
+    }
+    button.secondary { cursor: pointer; padding: 9px 13px; background: #1a293b; }
+
+    .status-bar {
+      font-size: 0.84rem; color: var(--muted); margin-bottom: 14px;
+      padding: 8px 12px; border-radius: 8px; background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+    .status-bar.error {
+      color: #fecdd3; background: rgba(244, 63, 94, 0.16);
+      border: 1px solid rgba(244, 63, 94, 0.4); font-weight: 600;
+    }
+
+    /* Animated Weather Icons */
+    .wx-svg { display: inline-block; vertical-align: middle; overflow: visible; }
+    @keyframes spinSlow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    @keyframes floatCloud { 0%, 100% { transform: translateX(0px); } 50% { transform: translateX(3.5px); } }
+    @keyframes pulseGlow { 0%, 100% { opacity: 0.85; transform: scale(1); } 50% { opacity: 1; transform: scale(1.06); } }
+    @keyframes rainDrop { 0% { transform: translateY(-2px); opacity: 0; } 40% { opacity: 1; } 100% { transform: translateY(7px); opacity: 0; } }
+    @keyframes snowDrift { 0% { transform: translate(0px, -2px) rotate(0deg); opacity: 0; } 30% { opacity: 1; } 100% { transform: translate(3px, 7px) rotate(90deg); opacity: 0; } }
+    @keyframes flashBolt { 0%, 75%, 100% { opacity: 0.2; } 80%, 90% { opacity: 1; } }
+    .anim-spin { transform-origin: 32px 32px; animation: spinSlow 18s linear infinite; }
+    .anim-float { animation: floatCloud 4.2s ease-in-out infinite; }
+    .anim-pulse { transform-origin: 32px 32px; animation: pulseGlow 3.2s ease-in-out infinite; }
+    .anim-drop-1 { animation: rainDrop 1.2s linear infinite; }
+    .anim-drop-2 { animation: rainDrop 1.2s linear 0.4s infinite; }
+    .anim-drop-3 { animation: rainDrop 1.2s linear 0.8s infinite; }
+    .anim-snow-1 { animation: snowDrift 2.2s ease-in-out infinite; }
+    .anim-snow-2 { animation: snowDrift 2.2s ease-in-out 0.7s infinite; }
+    .anim-snow-3 { animation: snowDrift 2.2s ease-in-out 1.4s infinite; }
+    .anim-bolt { animation: flashBolt 2.4s infinite; }
+
+    /* Hero Current Conditions + Cloud Base + Density Altitude + Frost */
+    .hero {
+      display: grid; grid-template-columns: 1fr; gap: 14px;
+      background: linear-gradient(145deg, rgba(20, 35, 52, 0.95), rgba(13, 21, 32, 0.95));
+      border: 1px solid var(--border-strong); border-radius: 16px;
+      padding: 16px; margin-bottom: 14px;
+      box-shadow: 0 14px 36px rgba(0, 0, 0, 0.4);
+    }
+    @media (min-width: 860px) {
+      .hero { grid-template-columns: 1fr 1.45fr; align-items: center; }
+    }
+    .hero-main { display: flex; align-items: center; gap: 16px; }
+    .hero-icon-wrap {
+      width: 78px; height: 78px; border-radius: 18px;
+      background: rgba(56, 189, 248, 0.08); border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .hero-temp { font-size: 2.5rem; font-weight: 800; line-height: 1.05; }
+    .hero-cond { font-size: 1.02rem; color: var(--accent); font-weight: 700; margin-top: 3px; }
+    .hero-meta { font-size: 0.84rem; color: var(--muted); margin-top: 4px; }
+    .hero-pills { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    @media (min-width: 580px) {
+      .hero-pills { grid-template-columns: repeat(3, 1fr); }
+    }
+    .pill {
+      background: var(--panel-soft); border: 1px solid var(--border);
+      border-radius: 11px; padding: 8px 11px;
+    }
+    .pill span { display: block; color: var(--muted); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; }
+    .pill strong { display: block; font-size: 0.94rem; color: var(--text); margin-top: 2px; }
+    .pill small { display: block; font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
+    .badge-vfr { color: var(--ok); font-weight: 800; }
+    .badge-mvfr { color: var(--warn); font-weight: 800; }
+    .badge-ifr { color: var(--alert); font-weight: 800; }
+
+    /* Live Ground Station, CWOP Bridge & WU PWS Strip */
+    .obs-strip {
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 14px; padding: 13px 15px; margin-bottom: 16px;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .obs-top {
+      display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px;
+    }
+    .obs-info { font-size: 0.88rem; }
+    .obs-tag {
+      display: inline-block; font-size: 0.7rem; font-weight: 800; text-transform: uppercase;
+      padding: 3px 8px; border-radius: 999px; background: rgba(16, 185, 129, 0.16); color: var(--ok);
+      margin-right: 6px;
+    }
+    .pws-form { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+    .pws-form input { width: 140px; font-size: 0.8rem; padding: 6px 9px; }
+    .pws-form button { font-size: 0.8rem; padding: 6px 11px; }
+
+    /* Cross-Border US + Canadian Radar Panel + Timeline Scrubber */
+    .radar-card {
+      background: var(--panel); border: 1px solid var(--border-strong);
+      border-radius: 14px; padding: 14px; margin-bottom: 18px;
+    }
+    .radar-toolbar {
+      display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center;
+      gap: 10px; margin-bottom: 10px;
+    }
+    .radar-btns { display: flex; flex-wrap: wrap; gap: 6px; }
+    .r-btn {
+      font-size: 0.8rem; padding: 6px 11px; border-radius: 8px; cursor: pointer;
+      background: #172434; border: 1px solid var(--border); color: var(--muted); font-weight: 600;
+    }
+    .r-btn.active {
+      background: rgba(56, 189, 248, 0.2); border-color: var(--accent); color: #ffffff;
+    }
+    #radarMap {
+      height: 370px; width: 100%; border-radius: 12px;
+      border: 1px solid var(--border); background: #09111a; z-index: 1;
+    }
+    .radar-scrubber {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+      margin-top: 10px; padding: 8px 10px; border-radius: 10px;
+      background: var(--panel-soft); border: 1px solid var(--border);
+    }
+    .radar-scrubber input[type="range"] {
+      flex: 1; min-width: 140px; padding: 0; accent-color: var(--accent);
+    }
+    .radar-caption {
+      font-size: 0.78rem; color: var(--muted); margin-top: 8px;
+      display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px;
+    }
+
+    /* Briefings & Model Bars */
+    .briefings { display: grid; grid-template-columns: 1fr; gap: 14px; margin-bottom: 18px; }
+    @media (min-width: 780px) { .briefings { grid-template-columns: 1fr 1fr; } }
+    .brief-card { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 15px; }
+    .brief-badge {
+      display: inline-block; font-size: 0.74rem; font-weight: 800; text-transform: uppercase;
+      padding: 4px 10px; border-radius: 999px; margin-bottom: 8px;
+      background: rgba(56, 189, 248, 0.14); color: var(--accent);
+    }
+    .brief-card p { margin: 0 0 10px 0; font-size: 0.92rem; color: #e2ecf7; }
+    .model-note {
+      background: var(--panel-soft); border-left: 3px solid var(--accent-2);
+      padding: 9px 12px; border-radius: 8px; font-size: 0.83rem; color: #cbd8e6;
+    }
+
+    .model-bars-card { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 15px; margin-bottom: 18px; }
+    .m-row { display: grid; grid-template-columns: 160px 1fr 56px; align-items: center; gap: 10px; margin-bottom: 7px; font-size: 0.83rem; }
+    .m-track { height: 9px; background: #0c141e; border-radius: 999px; overflow: hidden; }
+    .m-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #0284c7, #38bdf8); }
+    .m-fill.consensus { background: linear-gradient(90deg, #10b981, #34d399); }
+    .m-val { text-align: right; font-weight: 700; }
+
+    /* Daily Strip */
+    .daily-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); gap: 10px; margin-bottom: 18px; }
+    .day-card { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 12px 10px; text-align: center; }
+    .day-name { font-weight: 700; font-size: 0.92rem; }
+    .day-icon { margin: 7px 0; display: flex; justify-content: center; }
+    .day-temps { font-size: 1.02rem; font-weight: 800; }
+    .day-temps .lo { color: var(--muted); font-weight: 500; }
+    .day-desc { font-size: 0.78rem; color: #c7d5e4; margin-top: 4px; }
+    .day-spread { margin-top: 6px; font-size: 0.72rem; padding: 3px 8px; border-radius: 999px; display: inline-block; background: var(--panel-soft); color: var(--muted); }
+
+    /* Hourly Table */
+    .table-wrap { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+    th, td { padding: 9px 10px; border-bottom: 1px solid var(--border); text-align: left; white-space: nowrap; }
+    th { color: var(--muted); font-weight: 700; background: #0c1520; font-size: 0.75rem; text-transform: uppercase; }
+    .les-HIGH_LES { color: var(--alert); font-weight: 700; }
+    .les-MOD_LES { color: var(--warn); font-weight: 700; }
+    .les-NONE, .les-NEUTRAL { color: var(--muted); }
+
+    /* Flight & North America Jet Stream View */
+    .jet-canvas-wrap {
+      background: var(--panel); border: 1px solid var(--border-strong);
+      border-radius: 14px; padding: 14px; margin-bottom: 16px;
+    }
+    #jetCanvas {
+      width: 100%; height: auto; display: block; border-radius: 10px;
+      background: #060b12; border: 1px solid var(--border);
+    }
+    .flight-cards {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px; margin-bottom: 16px;
+    }
+    .f-card {
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 14px; padding: 14px;
+    }
+    .f-card .k { font-size: 0.74rem; text-transform: uppercase; color: var(--accent); font-weight: 700; }
+    .f-card .v { font-size: 1.42rem; font-weight: 800; margin: 5px 0; }
+    .f-card .d { font-size: 0.82rem; color: var(--muted); }
+
+    footer {
+      margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--border);
+      display: flex; flex-wrap: wrap; gap: 14px; font-size: 0.83rem;
+    }
+    footer a { color: var(--accent); text-decoration: none; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>Blue Water &amp; Thumb Weather + Jet Stream Command</h1>
+        <div class="sub">Hyper-local 48049 ensemble, US/Canadian cross-border radar, cloud base &amp; North America flight wind simulator</div>
+      </div>
+      <nav class="nav-tabs" aria-label="App Views">
+        <button class="nav-tab active" data-tab="localView">Local Weather &amp; Radar</button>
+        <button class="nav-tab" data-tab="flightView">North America Jet &amp; Flights</button>
+      </nav>
+    </header>
+
+    <!-- ==================== VIEW 1: HYPER-LOCAL WEATHER & RADAR ==================== -->
+    <main id="localView" class="view-section active">
+      <div id="alertBanner" class="alert-banner"></div>
+
+      <div class="controls">
+        <div class="input-group">
+          <label for="zipInput">Local ZIP</label>
+          <input id="zipInput" class="zip-in" type="text" inputmode="numeric" maxlength="5" list="localZips" value="48049" />
+        </div>
+        <datalist id="localZips">
+          <option value="48049">North Street / Ruby</option>
+          <option value="48060">Port Huron</option>
+          <option value="48059">Fort Gratiot</option>
+          <option value="48079">St. Clair</option>
+          <option value="48032">Jeddo</option>
+          <option value="48097">Yale</option>
+          <option value="48065">Romeo</option>
+          <option value="48371">Oxford</option>
+          <option value="48362">Lake Orion</option>
+          <option value="48341">Pontiac</option>
+        </datalist>
+
+        <div class="input-group">
+          <label for="stationSelect">NWS / AWOS Ground Station</label>
+          <select id="stationSelect">
+            <option value="KPHN" selected>KPHN — St. Clair County Intl (Port Huron)</option>
+            <option value="KMTC">KMTC — Selfridge ANGB (Mt. Clemens)</option>
+            <option value="KFNT">KFNT — Flint Bishop Intl</option>
+            <option value="KDTW">KDTW — Detroit Metro</option>
+            <option value="KPTK">KPTK — Oakland County Intl (Pontiac)</option>
+          </select>
+        </div>
+
+        <div class="input-group">
+          <label for="daysSelect">Window</label>
+          <select id="daysSelect">
+            <option value="3">3-Day</option>
+            <option value="5" selected>5-Day</option>
+            <option value="7">7-Day</option>
+          </select>
+        </div>
+
+        <button class="primary" id="goBtn">Update All</button>
+        <button class="secondary" id="shareBtn">Share / Install</button>
+      </div>
+
+      <div class="status-bar" id="statusBar">Initializing 48049 multi-model forecast, cloud base &amp; cross-border radar...</div>
+
+      <!-- Hero Conditions + Cloud Base Indicator + Frost/Icing -->
+      <section class="hero" id="heroBox"></section>
+
+      <!-- Real-Time Ground Truth (CWOP Bridge + NWS Station + Optional Weather Underground PWS) -->
+      <section class="obs-strip">
+        <div class="obs-top">
+          <div class="obs-info" id="obsText">
+            <span class="obs-tag">Live Station</span> Loading latest METAR/CWOP ground report...
+          </div>
+        </div>
+        <div class="pws-form">
+          <input id="cwopId" type="text" placeholder="CWOP ID (e.g. EW9999)" title="APRS/CWOP Station ID via cwop_server.py" />
+          <input id="cwopHost" type="text" placeholder="CWOP Bridge URL" value="http://localhost:8085" title="Local Python CWOP Bridge URL" />
+          <input id="pwsId" type="text" placeholder="WU PWS ID (optional)" title="Weather Underground PWS ID" />
+          <input id="pwsKey" type="password" placeholder="WU API Key (optional)" title="Weather Underground PWS API Key" />
+          <button class="secondary" id="savePwsBtn">Save &amp; Poll Station</button>
+        </div>
+      </section>
+
+      <!-- Combined US + Canadian Interactive Radar + Scrubber -->
+      <section class="radar-card">
+        <div class="radar-toolbar">
+          <div>
+            <strong style="font-size:0.98rem;">Cross-Border US + Canadian Live &amp; Simulated Radar</strong>
+            <div style="font-size:0.78rem; color:var(--muted);">Blends Environment Canada MSC GeoMet (Exeter CASET) + US NEXRAD / RainViewer</div>
+          </div>
+          <div class="radar-btns">
+            <button class="r-btn active" data-layer="combined">Combined US + Canada</button>
+            <button class="r-btn" data-layer="eccc_rain">Canada 1km Rain (GeoMet)</button>
+            <button class="r-btn" data-layer="eccc_snow">Canada 1km Snow (GeoMet)</button>
+            <button class="r-btn" data-layer="eccc_extrap">Simulated Extrapolation (dBZ)</button>
+            <button class="r-btn" data-layer="rv_only">US/Global NEXRAD (RainViewer)</button>
+          </div>
+        </div>
+        <div id="radarMap"></div>
+        <div class="radar-scrubber">
+          <button class="secondary" id="radarPlayBtn" style="padding:5px 11px; font-size:0.8rem;">Play Loop</button>
+          <input type="range" id="radarSlider" min="0" max="0" value="0" />
+          <span id="radarFrameTime" style="font-size:0.8rem; font-weight:700; color:var(--accent); min-width:115px; text-align:right;">Latest Frame</span>
+        </div>
+        <div class="radar-caption">
+          <span id="radarStatus">Radar layer: Combined US NEXRAD + Environment Canada 1km Composite</span>
+          <span>Data: ECCC MSC GeoMet WMS &amp; <a href="https://www.rainviewer.com" target="_blank" rel="noopener" style="color:var(--accent);">RainViewer</a></span>
+        </div>
+      </section>
+
+      <!-- Briefings & Model Comparison -->
+      <section class="briefings" id="briefingsBox"></section>
+      <section class="model-bars-card" id="modelBarsBox"></section>
+
+      <h2>Day-by-Day Visual Outlook</h2>
+      <section class="daily-strip" id="dailyStrip"></section>
+
+      <h2>3-Hourly Forecast, Cloud Base &amp; Simulated Reflectivity Table</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Conditions</th>
+              <th>Consensus</th>
+              <th>Spread</th>
+              <th>Cloud Base (AGL)</th>
+              <th>Sim. Radar (RRFS)</th>
+              <th>Precip %</th>
+              <th>Wind &amp; Gusts</th>
+              <th>Lake Huron</th>
+            </tr>
+          </thead>
+          <tbody id="rowsBody"></tbody>
+        </table>
+      </div>
+    </main>
+
+    <!-- ==================== VIEW 2: NORTH AMERICA JET STREAM & FLIGHT SPEED ==================== -->
+    <section id="flightView" class="view-section">
+      <div class="controls">
+        <div class="input-group">
+          <label for="origSelect">Departure Hub</label>
+          <select id="origSelect">
+            <option value="42.2124,-83.3534,DTW" selected>DTW — Detroit Metro</option>
+            <option value="42.9654,-83.7436,FNT">FNT — Flint Bishop</option>
+            <option value="41.9742,-87.9073,ORD">ORD — Chicago O'Hare</option>
+            <option value="35.3931,-97.6007,OKC">OKC — Oklahoma City</option>
+            <option value="33.9416,-118.4085,LAX">LAX — Los Angeles</option>
+            <option value="40.6413,-73.7781,JFK">JFK — New York JFK</option>
+          </select>
+        </div>
+
+        <div class="input-group">
+          <label for="destSelect">Arrival Hub</label>
+          <select id="destSelect">
+            <option value="35.3931,-97.6007,OKC" selected>OKC — Oklahoma City</option>
+            <option value="42.2124,-83.3534,DTW">DTW — Detroit Metro</option>
+            <option value="42.9654,-83.7436,FNT">FNT — Flint Bishop</option>
+            <option value="32.8998,-97.0403,DFW">DFW — Dallas/Fort Worth</option>
+            <option value="39.8561,-104.6737,DEN">DEN — Denver</option>
+            <option value="33.9416,-118.4085,LAX">LAX — Los Angeles</option>
+            <option value="40.6413,-73.7781,JFK">JFK — New York JFK</option>
+            <option value="25.7959,-80.2870,MIA">MIA — Miami</option>
+          </select>
+        </div>
+
+        <div class="input-group">
+          <label for="altSelect">Cruise Level</label>
+          <select id="altSelect">
+            <option value="300hPa">FL300 (~30,000 ft / 300 hPa)</option>
+            <option value="250hPa" selected>FL340 (~34,000 ft / 250 hPa)</option>
+            <option value="200hPa">FL390 (~39,000 ft / 200 hPa)</option>
+          </select>
+        </div>
+
+        <div class="input-group">
+          <label for="tasInput">Aircraft Airspeed (mph)</label>
+          <input id="tasInput" type="number" value="530" min="350" max="620" style="width:110px;" />
+        </div>
+
+        <div class="input-group">
+          <label for="flightDate">Departure Date/Time</label>
+          <input id="flightDate" type="datetime-local" />
+        </div>
+
+        <button class="primary" id="calcFlightBtn">Simulate Flight</button>
+      </div>
+
+      <div class="status-bar" id="flightStatus">Sampling North America upper-level wind grid (250 hPa)...</div>
+
+      <!-- Visual North America Jet Stream Map & Corridor Overlay -->
+      <div class="jet-canvas-wrap">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
+          <strong style="font-size:0.96rem;">North America Upper-Level Jet Stream &amp; Flight Corridor Impact</strong>
+          <span style="font-size:0.78rem; color:var(--muted);">Live GFS/ECMWF wind vectors at cruising altitude · Green = Tailwind Boost · Amber/Red = Headwind Drag</span>
+        </div>
+        <canvas id="jetCanvas" width="960" height="460"></canvas>
+      </div>
+
+      <!-- Flight Metrics Cards -->
+      <section class="flight-cards" id="flightCards"></section>
+
+      <!-- Departure Window Optimizer (+/- 3 Hours) -->
+      <h2>Departure Window Optimizer (&plusmn;3 Hours Around Target Takeoff)</h2>
+      <div class="table-wrap" style="margin-bottom:18px;">
+        <table>
+          <thead>
+            <tr>
+              <th>Departure Slot</th>
+              <th>Route Jet Wind</th>
+              <th>Net Wind Component</th>
+              <th>Ground Speed</th>
+              <th>Cruise Duration</th>
+              <th>Delta vs. Still Air</th>
+            </tr>
+          </thead>
+          <tbody id="flightWindowBody"></tbody>
+        </table>
+      </div>
+
+      <!-- 7-Day Daily Flight Duration Impact Table -->
+      <h2>Daily Flight Ground Speed &amp; Arrival Impact (Next 7 Days at Same Departure Hour)</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Route Mid-Level Jet Wind</th>
+              <th>Net Tailwind / Headwind</th>
+              <th>True Airspeed</th>
+              <th>Actual Ground Speed</th>
+              <th>Cruise Duration</th>
+              <th>Schedule Impact</th>
+            </tr>
+          </thead>
+          <tbody id="flightDailyBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <footer>
+      <a href="https://radar.weather.gov/station/kdtx/standard" target="_blank" rel="noopener">NWS KDTX White Lake Radar</a>
+      <a href="https://weather.gc.ca/?layers=radar&center=43.35,-81.38&zoom=7" target="_blank" rel="noopener">Environment Canada Exeter Radar</a>
+      <a href="https://www.weather.gov/dtx/" target="_blank" rel="noopener">NWS DTX Advisories</a>
+      <a href="https://weather.gc.ca/warnings/index_e.html?prov=son" target="_blank" rel="noopener">Sarnia / Lambton Marine Alerts</a>
+      <a href="https://aviationweather.gov/gfa/" target="_blank" rel="noopener">Aviation Weather Center GFA</a>
+    </footer>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+
+  <script>
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("./sw.js").catch(() => {});
+    }
+
+    const ANCHOR_LAT = 42.99, ANCHOR_LON = -82.58;
+    const LAKE_HURON_SST_C = { 1: 2.2, 2: 0.8, 3: 1.1, 4: 3.3, 5: 7.8, 6: 15.0, 7: 20.6, 8: 21.7, 9: 20.0, 10: 15.0, 11: 9.4, 12: 5.0 };
+
+    const BUILTIN_ZIPS = {
+      "48049": { name: "North Street / Ruby, MI", lat: 42.99, lon: -82.58 },
+      "48060": { name: "Port Huron, MI", lat: 42.97, lon: -82.42 },
+      "48059": { name: "Fort Gratiot, MI", lat: 43.04, lon: -82.46 },
+      "48040": { name: "Marysville, MI", lat: 42.91, lon: -82.49 },
+      "48079": { name: "St. Clair, MI", lat: 42.82, lon: -82.49 },
+      "48074": { name: "Smiths Creek, MI", lat: 42.93, lon: -82.61 },
+      "48032": { name: "Jeddo, MI", lat: 43.13, lon: -82.58 },
+      "48097": { name: "Yale, MI", lat: 43.13, lon: -82.80 },
+      "48065": { name: "Romeo, MI", lat: 42.80, lon: -83.01 },
+      "48371": { name: "Oxford, MI", lat: 42.82, lon: -83.26 },
+      "48362": { name: "Lake Orion, MI", lat: 42.78, lon: -83.24 },
+      "48341": { name: "Pontiac, MI", lat: 42.64, lon: -83.29 }
+    };
+
+    const MODELS = {
+      RRFS: "ncep_rrfs_conus",
+      NBM: "ncep_nbm_conus",
+      ECMWF: "ecmwf_ifs025",
+      GFS: "gfs_seamless",
+      AIGFS: "ncep_aigfs025",
+      GEM: "gem_seamless",
+      ICON: "icon_seamless"
+    };
+
+    const MODEL_NAMES = {
+      RRFS: "NOAA RRFS (3 km)", NBM: "National Blend (NBM)", ECMWF: "European (ECMWF)",
+      GFS: "American (GFS)", AIGFS: "NOAA AI-GFS", GEM: "Canadian (GEM)",
+      ICON: "German (ICON)", WN2: "WeatherNext 2 AI"
+    };
+
+    // Tab Switcher
+    document.querySelectorAll(".nav-tab").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".nav-tab").forEach(b => b.classList.remove("active"));
+        document.querySelectorAll(".view-section").forEach(v => v.classList.remove("active"));
+        btn.classList.add("active");
+        document.getElementById(btn.dataset.tab).classList.add("active");
+        if (btn.dataset.tab === "localView" && radarMap) {
+          setTimeout(() => radarMap.invalidateSize(), 120);
+        }
+        if (btn.dataset.tab === "flightView") {
+          runFlightSim();
+        }
+      });
+    });
+
+    function getAnimatedSvg(code, isNight = false, size = 44) {
+      const s = `width="${size}" height="${size}" viewBox="0 0 64 64" class="wx-svg"`;
+      if (code === 0) {
+        return isNight
+          ? `<svg ${s}><path class="anim-pulse" d="M38 14a18 18 0 1 0 12 31A16 16 0 0 1 38 14z" fill="#fde047"/></svg>`
+          : `<svg ${s}><g class="anim-spin"><circle cx="32" cy="32" r="12" fill="#facc15"/><g stroke="#facc15" stroke-width="3" stroke-linecap="round"><line x1="32" y1="8" x2="32" y2="14"/><line x1="32" y1="50" x2="32" y2="56"/><line x1="8" y1="32" x2="14" y2="32"/><line x1="50" y1="32" x2="56" y2="32"/></g></g></svg>`;
+      }
+      if (code === 1 || code === 2) {
+        return `<svg ${s}><circle class="anim-pulse" cx="23" cy="23" r="9" fill="#facc15"/><path class="anim-float" d="M22 46h23a9 9 0 0 0 1-17.9A12 12 0 0 0 23 26a10 10 0 0 0-1 20z" fill="#cbd5e1"/></svg>`;
+      }
+      if ([51,53,55,61,63,65,80,81,82].includes(code)) {
+        return `<svg ${s}><path class="anim-float" d="M18 36h28a8 8 0 0 0 1-15.9A11 11 0 0 0 26 18a9 9 0 0 0-8 18z" fill="#94a3b8"/><g stroke="#38bdf8" stroke-width="2.8" stroke-linecap="round"><line class="anim-drop-1" x1="23" y1="40" x2="21" y2="48"/><line class="anim-drop-2" x1="32" y1="40" x2="30" y2="48"/><line class="anim-drop-3" x1="41" y1="40" x2="39" y2="48"/></g></svg>`;
+      }
+      if ([71,73,75,77,85,86].includes(code)) {
+        return `<svg ${s}><path class="anim-float" d="M18 35h28a8 8 0 0 0 1-15.9A11 11 0 0 0 26 17a9 9 0 0 0-8 18z" fill="#cbd5e1"/><g fill="#e0f2fe"><circle class="anim-snow-1" cx="23" cy="43" r="2.4"/><circle class="anim-snow-2" cx="32" cy="45" r="2.4"/><circle class="anim-snow-3" cx="41" cy="43" r="2.4"/></g></svg>`;
+      }
+      if ([95,96,99].includes(code)) {
+        return `<svg ${s}><path class="anim-float" d="M18 35h28a8 8 0 0 0 1-15.9A11 11 0 0 0 26 17a9 9 0 0 0-8 18z" fill="#64748b"/><polygon class="anim-bolt" points="33,35 26,46 32,46 29,56 40,43 34,43" fill="#facc15"/></svg>`;
+      }
+      return `<svg ${s}><path class="anim-float" d="M17 43h29a9 9 0 0 0 1-17.9A12 12 0 0 0 24 23a10 10 0 0 0-7 20z" fill="#94a3b8"/></svg>`;
+    }
+
+    function weatherLabel(code) {
+      if (code === 0) return "Clear";
+      if (code === 1) return "Mostly Clear";
+      if (code === 2) return "Partly Cloudy";
+      if (code === 3) return "Overcast";
+      if (code === 45 || code === 48) return "Fog";
+      if ([51,53,55,56,57].includes(code)) return "Drizzle";
+      if ([61,63,65,80,81,82].includes(code)) return "Rain";
+      if ([66,67].includes(code)) return "Freezing Rain";
+      if ([71,73,75,77,85,86].includes(code)) return "Snow";
+      if ([95,96,99].includes(code)) return "T-Storms";
+      return "Cloudy";
+    }
+
+    function degToCardinal(deg) {
+      const dirs = ["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"];
+      return dirs[Math.round(((deg % 360) + 360) % 360 / 22.5) % 16];
+    }
+
+    function haversineMiles(lat1, lon1, lat2, lon2) {
+      const R = 3958.8, toRad = d => d * Math.PI / 180;
+      const dLat = toRad(lat2 - lat1), dLon = toRad(lon2 - lon1);
+      const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
+      return 2 * R * Math.asin(Math.sqrt(a));
+    }
+
+    function calcCloudBaseFt(tempF, dewF) {
+      if (tempF == null || dewF == null) return null;
+      return Math.max(100, Math.round(((tempF - dewF) / 4.4) * 1000));
+    }
+
+    function flightCategory(baseFt) {
+      if (baseFt == null) return { label: "—", cls: "" };
+      if (baseFt < 1000) return { label: "IFR Low Deck", cls: "badge-ifr" };
+      if (baseFt <= 3000) return { label: "MVFR Ceiling", cls: "badge-mvfr" };
+      return { label: "VFR High Base", cls: "badge-vfr" };
+    }
+
+    function frostRiskLabel(tempF, dewF) {
+      if (tempF == null) return { label: "Normal", detail: "Above freezing" };
+      const spread = dewF != null ? (tempF - dewF) : 10;
+      if (tempF <= 32) return { label: "Freeze / Ice", detail: "Sub-freezing surface" };
+      if (tempF <= 36 && spread <= 4) return { label: "Bridge Frost Risk", detail: "Radiational deck frost" };
+      return { label: "Clear Pavement", detail: "No frost threshold" };
+    }
+
+    // ==================== NWS ACTIVE ALERTS ====================
+    async function loadNwsAlerts(lat, lon) {
+      const banner = document.getElementById("alertBanner");
+      try {
+        const res = await fetch(`https://api.weather.gov/alerts/active?point=${lat.toFixed(3)},${lon.toFixed(3)}`, {
+          headers: { "Accept": "application/geo+json" }
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        const features = data.features || [];
+        if (!features.length) {
+          banner.classList.remove("visible");
+          return;
+        }
+        const top = features[0].properties;
+        banner.innerHTML = `<strong>Active NWS Alert (${features.length}):</strong> ${top.event} — ${top.headline || ""}`;
+        banner.classList.add("visible");
+      } catch (e) {
+        banner.classList.remove("visible");
+      }
+    }
+
+    // ==================== INTERACTIVE US + CANADIAN RADAR + ANIMATED SCRUBBER ====================
+    let radarMap = null;
+    let rvTileLayers = [];
+    let rvFrames = [];
+    let rvCurrentIdx = 0;
+    let rvTimer = null;
+    let ecccRainWms = null;
+    let ecccSnowWms = null;
+    let ecccExtrapWms = null;
+    let activeRadarMode = "combined";
+
+    function setRvFrame(idx) {
+      if (!rvTileLayers.length || !radarMap) return;
+      rvTileLayers.forEach((l, i) => {
+        if (i === idx && (activeRadarMode === "combined" || activeRadarMode === "rv_only")) {
+          if (!radarMap.hasLayer(l)) l.addTo(radarMap);
+        } else if (radarMap.hasLayer(l)) {
+          radarMap.removeLayer(l);
+        }
+      });
+      rvCurrentIdx = idx;
+      const frame = rvFrames[idx];
+      if (frame) {
+        const dt = new Date(frame.time * 1000).toLocaleTimeString("en-US", {
+          timeZone: "America/Detroit", hour: "2-digit", minute: "2-digit"
+        });
+        document.getElementById("radarFrameTime").textContent = `${dt} EDT`;
+        document.getElementById("radarSlider").value = String(idx);
+      }
+    }
+
+    async function initRadar(lat, lon) {
+      if (!radarMap) {
+        radarMap = L.map("radarMap", { zoomControl: true }).setView([lat, lon], 7);
+        L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+          attribution: "&copy; OpenStreetMap &copy; CARTO",
+          maxZoom: 14
+        }).addTo(radarMap);
+
+        ecccRainWms = L.tileLayer.wms("https://geo.weather.gc.ca/geomet?", {
+          layers: "RADAR_1KM_RRAI", version: "1.3.0", format: "image/png", transparent: true, opacity: 0.72, INTERPOLATION: "TRUE"
+        });
+        ecccSnowWms = L.tileLayer.wms("https://geo.weather.gc.ca/geomet?", {
+          layers: "RADAR_1KM_RSNO", version: "1.3.0", format: "image/png", transparent: true, opacity: 0.72, INTERPOLATION: "TRUE"
+        });
+        ecccExtrapWms = L.tileLayer.wms("https://geo.weather.gc.ca/geomet?", {
+          layers: "Radar_1km_dBZ-Extrapolation", version: "1.3.0", format: "image/png", transparent: true, opacity: 0.75, INTERPOLATION: "TRUE"
+        });
+
+        try {
+          const rvRes = await fetch("https://api.rainviewer.com/public/weather-maps.json");
+          const rvData = await rvRes.json();
+          rvFrames = (rvData?.radar?.past || []).slice(-8);
+          rvTileLayers = rvFrames.map(f =>
+            L.tileLayer(`${rvData.host}${f.path}/256/{z}/{x}/{y}/2/1_1.png`, {
+              maxNativeZoom: 7, maxZoom: 12, opacity: 0.68
+            })
+          );
+          if (rvFrames.length) {
+            const slider = document.getElementById("radarSlider");
+            slider.max = String(rvFrames.length - 1);
+            slider.value = String(rvFrames.length - 1);
+            rvCurrentIdx = rvFrames.length - 1;
+          }
+        } catch (e) {}
+
+        L.circleMarker([42.99, -82.58], { radius: 6, color: "#38bdf8", fillOpacity: 0.9 }).addTo(radarMap).bindPopup("48049 Ruby / North Street");
+        L.circleMarker([42.70, -83.47], { radius: 5, color: "#10b981", fillOpacity: 0.8 }).addTo(radarMap).bindPopup("KDTX NEXRAD (White Lake, MI)");
+        L.circleMarker([43.37, -81.38], { radius: 5, color: "#f59e0b", fillOpacity: 0.8 }).addTo(radarMap).bindPopup("CASET Radar (Exeter, ON)");
+      } else {
+        radarMap.setView([lat, lon], 7);
+      }
+      applyRadarMode(activeRadarMode);
+    }
+
+    function applyRadarMode(mode) {
+      activeRadarMode = mode;
+      [...rvTileLayers, ecccRainWms, ecccSnowWms, ecccExtrapWms].forEach(l => {
+        if (l && radarMap.hasLayer(l)) radarMap.removeLayer(l);
+      });
+
+      const statusEl = document.getElementById("radarStatus");
+      if (mode === "combined") {
+        setRvFrame(rvCurrentIdx);
+        if (ecccRainWms) ecccRainWms.addTo(radarMap);
+        statusEl.textContent = "Active: US NEXRAD (RainViewer) + Environment Canada 1km Border Composite";
+      } else if (mode === "eccc_rain") {
+        if (ecccRainWms) ecccRainWms.addTo(radarMap);
+        statusEl.textContent = "Active: Environment Canada MSC GeoMet 1km Rain Rate (mm/hr)";
+      } else if (mode === "eccc_snow") {
+        if (ecccSnowWms) ecccSnowWms.addTo(radarMap);
+        statusEl.textContent = "Active: Environment Canada MSC GeoMet 1km Snow Rate (cm/hr)";
+      } else if (mode === "eccc_extrap") {
+        if (ecccExtrapWms) ecccExtrapWms.addTo(radarMap);
+        statusEl.textContent = "Active: MSC GeoMet Simulated Radar Extrapolation (dBZ storm track)";
+      } else if (mode === "rv_only") {
+        setRvFrame(rvCurrentIdx);
+        statusEl.textContent = "Active: US NEXRAD / RainViewer Composite";
+      }
+    }
+
+    document.querySelectorAll(".r-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".r-btn").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        applyRadarMode(btn.dataset.layer);
+      });
+    });
+
+    document.getElementById("radarSlider").addEventListener("input", e => {
+      setRvFrame(parseInt(e.target.value, 10));
+    });
+
+    document.getElementById("radarPlayBtn").addEventListener("click", e => {
+      if (rvTimer) {
+        clearInterval(rvTimer);
+        rvTimer = null;
+        e.target.textContent = "Play Loop";
+      } else if (rvFrames.length) {
+        e.target.textContent = "Pause";
+        rvTimer = setInterval(() => {
+          const next = (rvCurrentIdx + 1) % rvFrames.length;
+          setRvFrame(next);
+        }, 650);
+      }
+    });
+
+    // ==================== LIVE GROUND OBSERVATIONS (CWOP BRIDGE -> WU PWS -> NWS METAR) ====================
+    async function loadGroundObs(stationId) {
+      const obsEl = document.getElementById("obsText");
+      const cwopId = (localStorage.getItem("bw_cwop_id") || "").trim();
+      const cwopHost = (localStorage.getItem("bw_cwop_host") || "http://localhost:8085").trim().replace(/\/$/, "");
+      const pwsId = (localStorage.getItem("bw_pws_id") || "").trim();
+      const pwsKey = (localStorage.getItem("bw_pws_key") || "").trim();
+
+      // 1. Try local Python CWOP/APRS Bridge if a CWOP station ID is entered
+      if (cwopId && cwopHost) {
+        try {
+          const cRes = await fetch(`${cwopHost}/cwop?station=${encodeURIComponent(cwopId)}`);
+          if (cRes.ok) {
+            const cData = await cRes.json();
+            if (!cData.error && cData.temp_f != null) {
+              obsEl.innerHTML = `<span class="obs-tag">CWOP APRS (${cData.station})</span> <strong>${cData.temp_f}°F</strong> · Wind ${degToCardinal(cData.wind_dir_deg)} ${cData.wind_mph} mph (G ${cData.gust_mph}) · Pressure ${cData.baro_inhg ?? "—"} inHg`;
+              return;
+            }
+          }
+        } catch (e) {}
+      }
+
+      // 2. Try Weather Underground PWS if configured
+      if (pwsId && pwsKey) {
+        try {
+          const wuUrl = `https://api.weather.com/v2/pws/observations/current?stationId=${encodeURIComponent(pwsId)}&format=json&units=e&apiKey=${encodeURIComponent(pwsKey)}`;
+          const r = await fetch(wuUrl);
+          if (r.ok) {
+            const d = await r.json();
+            const o = d.observations?.[0];
+            if (o) {
+              const imp = o.imperial || {};
+              const base = calcCloudBaseFt(imp.temp, imp.dewpt);
+              obsEl.innerHTML = `<span class="obs-tag">WU PWS (${pwsId})</span> <strong>${imp.temp}°F</strong> (Dew ${imp.dewpt}°F) · Wind ${degToCardinal(o.winddir)} ${imp.windSpeed} mph (G ${imp.windGust}) · Pressure ${imp.pressure}" · Cloud Base ~${base?.toLocaleString()} ft`;
+              return;
+            }
+          }
+        } catch (e) {}
+      }
+
+      // 3. Default Zero-Key Official NWS / CWOP-linked Station Observation
+      try {
+        const res = await fetch(`https://api.weather.gov/stations/${stationId}/observations/latest`, {
+          headers: { "Accept": "application/geo+json" }
+        });
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        const p = data.properties || {};
+        const tF = p.temperature?.value != null ? (p.temperature.value * 9/5 + 32) : null;
+        const dF = p.dewpoint?.value != null ? (p.dewpoint.value * 9/5 + 32) : null;
+        const wMph = p.windSpeed?.value != null ? (p.windSpeed.value * 0.621371) : null;
+        const wDir = p.windDirection?.value != null ? degToCardinal(p.windDirection.value) : "VRB";
+        const pressIn = p.barometricPressure?.value != null ? (p.barometricPressure.value * 0.0002953).toFixed(2) : null;
+        const obsBase = calcCloudBaseFt(tF, dF);
+
+        obsEl.innerHTML = `<span class="obs-tag">Live NWS ${stationId}</span> <strong>${tF != null ? tF.toFixed(1) + "°F" : "—"}</strong> · Dewpoint ${dF != null ? dF.toFixed(1) + "°F" : "—"} · Wind ${wDir} ${wMph != null ? Math.round(wMph) + " mph" : "Calm"} · Pressure ${pressIn ? pressIn + " inHg" : "—"} · Measured Cloud Base: <strong>~${obsBase ? obsBase.toLocaleString() + " ft" : "—"}</strong>`;
+      } catch (e) {
+        obsEl.innerHTML = `<span class="obs-tag">Ground Station</span> Unable to reach ${stationId} METAR feed right now.`;
+      }
+    }
+
+    document.getElementById("savePwsBtn").addEventListener("click", () => {
+      localStorage.setItem("bw_cwop_id", document.getElementById("cwopId").value.trim());
+      localStorage.setItem("bw_cwop_host", document.getElementById("cwopHost").value.trim());
+      localStorage.setItem("bw_pws_id", document.getElementById("pwsId").value.trim());
+      localStorage.setItem("bw_pws_key", document.getElementById("pwsKey").value.trim());
+      loadGroundObs(document.getElementById("stationSelect").value);
+    });
+
+    // ==================== MAIN MULTI-MODEL FORECAST ====================
+    async function lookupLocalZip(zip) {
+      if (BUILTIN_ZIPS[zip]) {
+        const b = BUILTIN_ZIPS[zip];
+        return { zip, name: b.name, lat: b.lat, lon: b.lon, miles: Math.round(haversineMiles(ANCHOR_LAT, ANCHOR_LON, b.lat, b.lon)) };
+      }
+      const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(zip)}&count=3&format=json&countryCode=US`);
+      const data = await res.json();
+      const place = (data.results || [])[0];
+      if (!place) throw new Error(`ZIP ${zip} not found.`);
+      return {
+        zip, name: `${place.name}, ${place.admin1 || "MI"}`,
+        lat: place.latitude, lon: place.longitude,
+        miles: Math.round(haversineMiles(ANCHOR_LAT, ANCHOR_LON, place.latitude, place.longitude))
+      };
+    }
+
+    async function runForecast() {
+      const statusBar = document.getElementById("statusBar");
+      const zip = document.getElementById("zipInput").value.trim() || "48049";
+      const days = parseInt(document.getElementById("daysSelect").value, 10) || 5;
+      const station = document.getElementById("stationSelect").value;
+
+      statusBar.className = "status-bar";
+      statusBar.textContent = `Updating 7-model ensemble, dewpoint cloud base & cross-border radar for ${zip}...`;
+
+      try {
+        const loc = await lookupLocalZip(zip);
+        localStorage.setItem("bw_last_zip", zip);
+
+        initRadar(loc.lat, loc.lon);
+        loadGroundObs(station);
+        loadNwsAlerts(loc.lat, loc.lon);
+
+        const baseParams = new URLSearchParams({
+          latitude: loc.lat,
+          longitude: loc.lon,
+          timezone: "America/Detroit",
+          temperature_unit: "fahrenheit",
+          wind_speed_unit: "mph",
+          precipitation_unit: "inch",
+          forecast_days: days,
+          models: Object.values(MODELS).join(","),
+          hourly: "temperature_2m,dew_point_2m,apparent_temperature,precipitation_probability,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m,temperature_850hPa,reflectivity_max"
+        });
+
+        const ensParams = new URLSearchParams({
+          latitude: loc.lat, longitude: loc.lon, timezone: "America/Detroit",
+          temperature_unit: "fahrenheit", forecast_days: days,
+          models: "google_weathernext2_ensemble", hourly: "temperature_2m"
+        });
+
+        const [detRes, ensRes] = await Promise.all([
+          fetch(`https://api.open-meteo.com/v1/forecast?${baseParams}`),
+          fetch(`https://ensemble-api.open-meteo.com/v1/ensemble?${ensParams}`).catch(() => null)
+        ]);
+
+        const detData = await detRes.json();
+        const ensData = ensRes && ensRes.ok ? await ensRes.json() : null;
+        const hourly = detData.hourly || {};
+        const times = hourly.time || [];
+        const ensHourly = (ensData && ensData.hourly) || {};
+        const ensKeys = Object.keys(ensHourly).filter(k => k.startsWith("temperature_2m_member"));
+
+        const nowIso = new Date().toLocaleString("sv-SE", { timeZone: "America/Detroit" }).replace(" ", "T").slice(0, 13) + ":00";
+        let startIdx = Math.max(0, times.findIndex(t => t >= nowIso));
+        const endIdx = Math.min(startIdx + days * 24, times.length);
+
+        const pickVal = (prefix, order, i) => {
+          for (const m of order) {
+            const arr = hourly[`${prefix}_${MODELS[m]}`];
+            if (Array.isArray(arr) && arr[i] != null) return arr[i];
+          }
+          return null;
+        };
+
+        const rows = [];
+        for (let lead = 0, i = startIdx; i < endIdx; i++, lead++) {
+          const ts = times[i];
+          const temps = {};
+          for (const [label, id] of Object.entries(MODELS)) {
+            const arr = hourly[`temperature_2m_${id}`];
+            if (Array.isArray(arr) && arr[i] != null) temps[label] = arr[i];
+          }
+          const wn2Vals = ensKeys.map(k => ensHourly[k]?.[i]).filter(v => v != null);
+          if (wn2Vals.length) temps.WN2 = wn2Vals.reduce((a, b) => a + b, 0) / wn2Vals.length;
+          if (!Object.keys(temps).length) continue;
+
+          const weights = lead <= 48
+            ? { RRFS: 0.30, NBM: 0.20, ECMWF: 0.20, WN2: 0.15, AIGFS: 0.05, GFS: 0.04, GEM: 0.03, ICON: 0.03 }
+            : { ECMWF: 0.30, WN2: 0.25, NBM: 0.15, AIGFS: 0.10, GEM: 0.08, GFS: 0.07, ICON: 0.05, RRFS: 0.05 };
+
+          let num = 0, den = 0;
+          for (const [m, t] of Object.entries(temps)) {
+            const w = weights[m] ?? 0.10;
+            num += t * w; den += w;
+          }
+          const wtd = num / den;
+          const entries = Object.entries(temps).sort((a, b) => a[1] - b[1]);
+          const lo = entries[0], hi = entries[entries.length - 1];
+          const spread = hi[1] - lo[1];
+
+          const dew = pickVal("dew_point_2m", ["RRFS","NBM","ECMWF","GFS","ICON"], i);
+          const cloudBaseFt = calcCloudBaseFt(wtd, dew);
+          const simDbz = pickVal("reflectivity_max", ["RRFS","NBM"], i);
+          const feelsLike = pickVal("apparent_temperature", ["NBM","RRFS","ECMWF","GFS"], i) ?? wtd;
+          const pop = pickVal("precipitation_probability", ["NBM","ECMWF","GFS","GEM"], i);
+          const wcode = pickVal("weather_code", ["NBM","RRFS","ECMWF","GFS"], i) ?? 3;
+          const wspd = pickVal("wind_speed_10m", ["RRFS","NBM","ECMWF","GFS"], i) ?? 0;
+          const wdir = pickVal("wind_direction_10m", ["RRFS","NBM","ECMWF","GFS"], i) ?? 0;
+          const wgst = pickVal("wind_gusts_10m", ["RRFS","NBM","ECMWF","GFS"], i) ?? 0;
+          const t850 = pickVal("temperature_850hPa", ["ECMWF","GFS","GEM"], i);
+
+          const dNorm = ((wdir % 360) + 360) % 360;
+          const fetchActive = (dNorm >= 330 || dNorm <= 70) && wspd >= 10;
+          const month = parseInt(ts.slice(5, 7), 10) || (new Date().getMonth() + 1);
+          const sstC = LAKE_HURON_SST_C[month] ?? 8.0;
+          const dtC = t850 != null ? (sstC - ((t850 - 32) * 5 / 9)) : null;
+
+          let lesRisk = "NONE";
+          if (fetchActive && dtC != null) {
+            if (dtC >= 15) lesRisk = "HIGH_LES";
+            else if (dtC >= 13) lesRisk = "MOD_LES";
+            else lesRisk = "NEUTRAL";
+          }
+
+          const hr = parseInt(ts.slice(11, 13), 10);
+          rows.push({
+            ts, lead, wtd, dew, cloudBaseFt, simDbz, spread, feelsLike, pop, wcode,
+            isNight: hr < 7 || hr >= 18, temps, loModel: lo[0], loVal: lo[1], hiModel: hi[0], hiVal: hi[1],
+            wspd, wdir: Math.round(dNorm), wgst, fetchActive, fetchSector: fetchActive ? degToCardinal(dNorm) : "-", dtC, lesRisk
+          });
+        }
+
+        const cur = rows[0];
+        const cat = flightCategory(cur.cloudBaseFt);
+        const frost = frostRiskLabel(cur.wtd, cur.dew);
+        document.getElementById("heroBox").innerHTML = `
+          <div class="hero-main">
+            <div class="hero-icon-wrap">${getAnimatedSvg(cur.wcode, cur.isNight, 58)}</div>
+            <div>
+              <div class="hero-temp">${Math.round(cur.wtd)}°F</div>
+              <div class="hero-cond">${weatherLabel(cur.wcode)} · Feels ${Math.round(cur.feelsLike)}°F</div>
+              <div class="hero-meta">${loc.name} (${loc.zip}) · Dewpoint ${cur.dew != null ? Math.round(cur.dew) + "°F" : "—"}</div>
+            </div>
+          </div>
+          <div class="hero-pills">
+            <div class="pill">
+              <span>Cloud Base (LCL)</span>
+              <strong>~${cur.cloudBaseFt ? cur.cloudBaseFt.toLocaleString() + " ft" : "—"}</strong>
+              <small class="${cat.cls}">${cat.label}</small>
+            </div>
+            <div class="pill">
+              <span>Wind &amp; Gusts</span>
+              <strong>${degToCardinal(cur.wdir)} ${Math.round(cur.wspd)} mph</strong>
+              <small>Gusts to ${Math.round(cur.wgst)} mph</small>
+            </div>
+            <div class="pill">
+              <span>Precip &amp; Sim Radar</span>
+              <strong>${cur.pop != null ? cur.pop + "%" : "Low"}${cur.simDbz != null && cur.simDbz > 5 ? " · " + Math.round(cur.simDbz) + " dBZ" : ""}</strong>
+              <small>RRFS composite echo</small>
+            </div>
+            <div class="pill">
+              <span>Surface / Bridge Status</span>
+              <strong>${frost.label}</strong>
+              <small>${frost.detail}</small>
+            </div>
+            <div class="pill">
+              <span>Lake Huron Fetch</span>
+              <strong>${cur.fetchActive ? cur.fetchSector + " Onshore" : "Offshore / Light"}</strong>
+              <small>${cur.dtC != null ? "Lake ΔT: " + cur.dtC.toFixed(1) + "°C" : "SST contrast"}</small>
+            </div>
+            <div class="pill">
+              <span>Model Spread</span>
+              <strong>${cur.spread.toFixed(1)}°F gap</strong>
+              <small>${cur.loModel} ${cur.loVal.toFixed(0)}° to ${cur.hiModel} ${cur.hiVal.toFixed(0)}°</small>
+            </div>
+          </div>
+        `;
+
+        const stRows = rows.slice(0, 48);
+        const stMin = Math.min(...stRows.map(r => r.wtd)), stMax = Math.max(...stRows.map(r => r.wtd));
+        const stMaxPop = Math.max(...stRows.map(r => r.pop ?? 0));
+        const minBase = Math.min(...stRows.map(r => r.cloudBaseFt ?? 9999));
+        document.getElementById("briefingsBox").innerHTML = `
+          <div class="brief-card">
+            <span class="brief-badge">Short-Term Briefing (48 Hours)</span>
+            <p>Temperatures in ${loc.name} will cycle between <strong>${Math.round(stMin)}°F and ${Math.round(stMax)}°F</strong> with peak precipitation odds near <strong>${stMaxPop}%</strong>. Lowest cloud bases drop to roughly <strong>${minBase.toLocaleString()} ft AGL</strong>.</p>
+            <div class="model-note"><strong>Model Spread:</strong> Models currently sit ${cur.spread.toFixed(1)}°F apart (${cur.loModel} coldest, ${cur.hiModel} warmest).</div>
+          </div>
+          <div class="brief-card">
+            <span class="brief-badge">Border Radar &amp; Lake Huron Note</span>
+            <p>Cross-border composite combines <strong>NWS KDTX (White Lake)</strong> and <strong>Environment Canada CASET (Exeter, ON)</strong> 1 km radar. Lake Huron water-to-850hPa ΔT reaches <strong>${Math.max(...rows.map(r => r.dtC ?? -99)).toFixed(1)}°C</strong>.</p>
+            <div class="model-note"><strong>Threshold:</strong> ΔT ≥ 13°C with NNW–ENE onshore wind triggers lake-effect cloud/snow bands.</div>
+          </div>
+        `;
+
+        const snap = rows[Math.min(24, rows.length - 1)];
+        const barEntries = [["Weighted Consensus", snap.wtd, true], ...Object.entries(snap.temps).sort((a,b) => b[1] - a[1]).map(([k,v]) => [MODEL_NAMES[k] || k, v, false])];
+        const minB = Math.min(...barEntries.map(x => x[1])) - 4, maxB = Math.max(...barEntries.map(x => x[1])) + 2;
+        document.getElementById("modelBarsBox").innerHTML = `
+          <h2 style="margin-top:0;">Model Temperature Comparison (+${snap.lead}h · ${snap.ts.replace("T", " ").slice(5, 16)})</h2>
+          ${barEntries.map(([name, val, isCons]) => {
+            const pct = Math.max(8, Math.min(100, ((val - minB) / Math.max(1, maxB - minB)) * 100));
+            return `<div class="m-row"><div>${name}</div><div class="m-track"><div class="m-fill ${isCons ? "consensus" : ""}" style="width:${pct.toFixed(1)}%"></div></div><div class="m-val">${val.toFixed(1)}°F</div></div>`;
+          }).join("")}
+        `;
+
+        const byDay = new Map();
+        rows.forEach(r => {
+          const k = r.ts.slice(0, 10);
+          if (!byDay.has(k)) byDay.set(k, []);
+          byDay.get(k).push(r);
+        });
+        let dIdx = 0;
+        document.getElementById("dailyStrip").innerHTML = Array.from(byDay.entries()).map(([dayKey, dRows]) => {
+          const hiT = Math.round(Math.max(...dRows.map(r => r.wtd)));
+          const loT = Math.round(Math.min(...dRows.map(r => r.wtd)));
+          const mid = dRows[Math.floor(dRows.length / 2)];
+          const label = dIdx === 0 ? "Today" : dIdx === 1 ? "Tomorrow" : new Date(dayKey + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+          dIdx++;
+          return `<div class="day-card">
+            <div class="day-name">${label}</div>
+            <div class="day-icon">${getAnimatedSvg(mid.wcode, false, 42)}</div>
+            <div class="day-temps">${hiT}° <span class="lo">/ ${loT}°</span></div>
+            <div class="day-desc">${weatherLabel(mid.wcode)}</div>
+            <div class="day-spread">Base ~${mid.cloudBaseFt ? (mid.cloudBaseFt/1000).toFixed(1) + "k ft" : "—"}</div>
+          </div>`;
+        }).join("");
+
+        document.getElementById("rowsBody").innerHTML = rows.filter((_, i) => i % 3 === 0).map(r => {
+          const dbzTxt = r.simDbz != null ? `${Math.round(r.simDbz)} dBZ` : "—";
+          const lesTxt = r.lesRisk === "HIGH_LES" ? "High LES" : r.lesRisk === "MOD_LES" ? "Mod LES" : r.fetchActive ? `${r.fetchSector} Fetch` : "Quiet";
+          return `<tr>
+            <td>${r.ts.replace("T", " ").slice(5, 16)}</td>
+            <td>${getAnimatedSvg(r.wcode, r.isNight, 22)} ${weatherLabel(r.wcode)}</td>
+            <td><strong>${r.wtd.toFixed(1)}°F</strong></td>
+            <td>${r.spread.toFixed(1)}° (${r.loModel}/${r.hiModel})</td>
+            <td>${r.cloudBaseFt ? r.cloudBaseFt.toLocaleString() + " ft" : "—"}</td>
+            <td>${dbzTxt}</td>
+            <td>${r.pop != null ? r.pop + "%" : "—"}</td>
+            <td>${degToCardinal(r.wdir)} ${Math.round(r.wspd)} (G ${Math.round(r.wgst)})</td>
+            <td class="les-${r.lesRisk}">${lesTxt}</td>
+          </tr>`;
+        }).join("");
+
+        statusBar.textContent = `Live: ${loc.name} (${loc.zip}) · ${Object.keys(cur.temps).length} Active Models · Cloud Base & US/Canadian Radar Ready`;
+      } catch (err) {
+        statusBar.className = "status-bar error";
+        statusBar.textContent = err.message || "Error loading weather data.";
+      }
+    }
+
+    // ==================== VIEW 2: NORTH AMERICA JET STREAM & FLIGHT SIMULATOR ====================
+    const toRad = d => d * Math.PI / 180;
+    const toDeg = r => (r * 180 / Math.PI + 360) % 360;
+
+    function greatCirclePoints(lat1, lon1, lat2, lon2) {
+      const R = 3958.8;
+      const dLat = toRad(lat2 - lat1), dLon = toRad(lon2 - lon1);
+      const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
+      const dist = 2 * R * Math.asin(Math.sqrt(a));
+      const y = Math.sin(dLon) * Math.cos(toRad(lat2));
+      const x = Math.cos(toRad(lat1))*Math.sin(toRad(lat2)) - Math.sin(toRad(lat1))*Math.cos(toRad(lat2))*Math.cos(dLon);
+      const bearing = toDeg(Math.atan2(y, x));
+      const pts = [0.25, 0.50, 0.75].map(f => ({
+        lat: +(lat1 + (lat2 - lat1) * f).toFixed(2),
+        lon: +(lon1 + (lon2 - lon1) * f).toFixed(2)
+      }));
+      return { dist, bearing, pts };
+    }
+
+    function drawNorthAmericaJetMap(windGrid, orig, dest, windCompMph) {
+      const canvas = document.getElementById("jetCanvas");
+      const ctx = canvas.getContext("2d");
+      const W = canvas.width, H = canvas.height;
+
+      const proj = (lat, lon) => ({
+        x: ((lon - (-130)) / 70) * W,
+        y: ((56 - lat) / 34) * H
+      });
+
+      ctx.clearRect(0, 0, W, H);
+      ctx.fillStyle = "#060c14";
+      ctx.fillRect(0, 0, W, H);
+
+      ctx.strokeStyle = "rgba(56, 189, 248, 0.08)";
+      ctx.lineWidth = 1;
+      for (let lon = -120; lon <= -60; lon += 10) {
+        const p = proj(40, lon);
+        ctx.beginPath(); ctx.moveTo(p.x, 0); ctx.lineTo(p.x, H); ctx.stroke();
+      }
+      for (let lat = 25; lat <= 55; lat += 5) {
+        const p = proj(lat, -95);
+        ctx.beginPath(); ctx.moveTo(0, p.y); ctx.lineTo(W, p.y); ctx.stroke();
+      }
+
+      const naOutline = [
+        [54,-130],[49,-125],[42,-124],[34,-120],[32,-117],[23,-110],[20,-105],[18,-95],
+        [21,-90],[25,-97],[29,-95],[30,-89],[25,-80],[31,-81],[35,-75],[40,-74],[42,-70],
+        [45,-67],[47,-64],[46,-60],[52,-56],[55,-60],[53,-79],[51,-80],[55,-83],[56,-92],
+        [56,-110],[56,-130]
+      ];
+      ctx.beginPath();
+      naOutline.forEach(([la, lo], idx) => {
+        const p = proj(la, lo);
+        if (idx === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+      });
+      ctx.closePath();
+      ctx.fillStyle = "rgba(22, 36, 54, 0.72)";
+      ctx.fill();
+      ctx.strokeStyle = "rgba(125, 211, 252, 0.35)";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      windGrid.forEach(cell => {
+        const p = proj(cell.lat, cell.lon);
+        const dirTo = toRad((cell.dirFrom + 180) % 360);
+        const len = Math.min(48, Math.max(10, cell.spd * 0.32));
+        const dx = Math.sin(dirTo) * len;
+        const dy = -Math.cos(dirTo) * len;
+
+        let color = "rgba(56, 189, 248, 0.55)";
+        if (cell.spd >= 115) color = "rgba(244, 63, 94, 0.92)";
+        else if (cell.spd >= 85) color = "rgba(245, 158, 11, 0.88)";
+        else if (cell.spd >= 60) color = "rgba(52, 211, 153, 0.78)";
+
+        ctx.strokeStyle = color;
+        ctx.lineWidth = cell.spd >= 85 ? 2.6 : 1.8;
+        ctx.beginPath();
+        ctx.moveTo(p.x - dx * 0.5, p.y - dy * 0.5);
+        ctx.lineTo(p.x + dx * 0.5, p.y + dy * 0.5);
+        ctx.stroke();
+
+        const headAngle = Math.atan2(dy, dx);
+        ctx.beginPath();
+        ctx.moveTo(p.x + dx * 0.5, p.y + dy * 0.5);
+        ctx.lineTo(p.x + dx * 0.5 - 6 * Math.cos(headAngle - 0.45), p.y + dy * 0.5 - 6 * Math.sin(headAngle - 0.45));
+        ctx.lineTo(p.x + dx * 0.5 - 6 * Math.cos(headAngle + 0.45), p.y + dy * 0.5 - 6 * Math.sin(headAngle + 0.45));
+        ctx.closePath();
+        ctx.fillStyle = color;
+        ctx.fill();
+      });
+
+      const p1 = proj(orig.lat, orig.lon);
+      const p2 = proj(dest.lat, dest.lon);
+      const midX = (p1.x + p2.x) / 2;
+      const midY = (p1.y + p2.y) / 2 - Math.abs(p2.x - p1.x) * 0.12;
+
+      ctx.beginPath();
+      ctx.moveTo(p1.x, p1.y);
+      ctx.quadraticCurveTo(midX, midY, p2.x, p2.y);
+      ctx.strokeStyle = windCompMph >= 0 ? "#10b981" : "#f59e0b";
+      ctx.lineWidth = 3.5;
+      ctx.setLineDash([8, 5]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      [ [p1, orig.code], [p2, dest.code] ].forEach(([pt, label]) => {
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, 6, 0, Math.PI * 2);
+        ctx.fillStyle = "#ffffff";
+        ctx.fill();
+        ctx.font = "bold 13px sans-serif";
+        ctx.fillStyle = "#f8fafc";
+        ctx.fillText(label, pt.x + 9, pt.y + 4);
+      });
+    }
+
+    async function runFlightSim() {
+      const fStatus = document.getElementById("flightStatus");
+      const [lat1, lon1, c1] = document.getElementById("origSelect").value.split(",");
+      const [lat2, lon2, c2] = document.getElementById("destSelect").value.split(",");
+      const level = document.getElementById("altSelect").value;
+      const tas = parseFloat(document.getElementById("tasInput").value) || 530;
+      const dtVal = document.getElementById("flightDate").value;
+
+      const orig = { lat: +lat1, lon: +lon1, code: c1 };
+      const dest = { lat: +lat2, lon: +lon2, code: c2 };
+      const route = greatCirclePoints(orig.lat, orig.lon, dest.lat, dest.lon);
+
+      fStatus.textContent = `Fetching upper-level winds (${level}) across North America & 3 route waypoints (${c1} → ${c2})...`;
+
+      try {
+        const gridCoords = [];
+        for (let la = 26; la <= 50; la += 6) {
+          for (let lo = -124; lo <= -68; lo += 8) {
+            gridCoords.push({ lat: la, lon: lo });
+          }
+        }
+        const allCoords = [...route.pts, ...gridCoords];
+        const lats = allCoords.map(c => c.lat).join(",");
+        const lons = allCoords.map(c => c.lon).join(",");
+
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lons}&wind_speed_unit=mph&forecast_days=7&hourly=wind_speed_${level},wind_direction_${level}`;
+        const res = await fetch(url);
+        const multiData = await res.json();
+        const list = Array.isArray(multiData) ? multiData : [multiData];
+
+        const times = list[0].hourly.time;
+        const targetIso = dtVal ? dtVal.slice(0, 13) + ":00" : new Date().toISOString().slice(0, 13) + ":00";
+        let idx = Math.max(0, times.findIndex(t => t >= targetIso));
+
+        const computeRouteAtHour = (hourIndex) => {
+          let sumComp = 0, sumSpd = 0, sumDir = 0;
+          for (let w = 0; w < 3; w++) {
+            const spd = list[w].hourly[`wind_speed_${level}`][hourIndex] ?? 0;
+            const dirFrom = list[w].hourly[`wind_direction_${level}`][hourIndex] ?? 0;
+            const dirTo = (dirFrom + 180) % 360;
+            sumComp += spd * Math.cos(toRad(dirTo - route.bearing));
+            sumSpd += spd;
+            sumDir += dirFrom;
+          }
+          const avgComp = sumComp / 3;
+          const gs = Math.max(220, tas + avgComp);
+          const stillMins = (route.dist / tas) * 60;
+          const actualMins = (route.dist / gs) * 60;
+          return {
+            avgSpd: sumSpd / 3,
+            avgDir: Math.round(sumDir / 3),
+            windComp: avgComp,
+            groundSpeed: gs,
+            stillMins,
+            actualMins,
+            diffMins: Math.round(actualMins - stillMins)
+          };
+        };
+
+        const curFlight = computeRouteAtHour(idx);
+
+        const windGrid = gridCoords.map((c, gIdx) => {
+          const item = list[gIdx + 3];
+          return {
+            lat: c.lat,
+            lon: c.lon,
+            spd: item?.hourly?.[`wind_speed_${level}`]?.[idx] ?? 0,
+            dirFrom: item?.hourly?.[`wind_direction_${level}`]?.[idx] ?? 270
+          };
+        });
+
+        drawNorthAmericaJetMap(windGrid, orig, dest, curFlight.windComp);
+
+        const isTail = curFlight.windComp >= 0;
+        const fmtDur = m => `${Math.floor(m / 60)}h ${Math.round(m % 60)}m`;
+
+        document.getElementById("flightCards").innerHTML = `
+          <div class="f-card">
+            <div class="k">Airspeed vs. Ground Speed</div>
+            <div class="v">${Math.round(tas)} mph → ${Math.round(curFlight.groundSpeed)} mph</div>
+            <div class="d">${c1} → ${c2} (${Math.round(route.dist)} mi · Course ${Math.round(route.bearing)}°)</div>
+          </div>
+          <div class="f-card">
+            <div class="k">3-Waypoint Jet Component (${level})</div>
+            <div class="v" style="color:${isTail ? "var(--ok)" : "var(--warn)"};">${isTail ? "+" : ""}${Math.round(curFlight.windComp)} mph ${isTail ? "Tailwind" : "Headwind"}</div>
+            <div class="d">Mean route upper wind: ${Math.round(curFlight.avgSpd)} mph from ${curFlight.avgDir}°</div>
+          </div>
+          <div class="f-card">
+            <div class="k">Cruise Duration &amp; Arrival Delta</div>
+            <div class="v" style="color:${curFlight.diffMins <= 0 ? "var(--ok)" : "var(--warn)"};">${curFlight.diffMins <= 0 ? Math.abs(curFlight.diffMins) + " min Faster" : curFlight.diffMins + " min Slower"}</div>
+            <div class="d">Still-air: <strong>${fmtDur(curFlight.stillMins)}</strong> · With wind: <strong>${fmtDur(curFlight.actualMins)}</strong></div>
+          </div>
+        `;
+
+        // Departure Window Optimizer (+/- 3 Hours)
+        const winRows = [];
+        for (let offset = -3; offset <= 3; offset++) {
+          const hIdx = idx + offset;
+          if (hIdx < 0 || hIdx >= times.length) continue;
+          const wSim = computeRouteAtHour(hIdx);
+          const tail = wSim.windComp >= 0;
+          const slotLabel = offset === 0 ? `${times[hIdx].replace("T", " ")} (Target)` : `${times[hIdx].replace("T", " ")} (${offset > 0 ? "+" + offset : offset}h)`;
+          winRows.push(`<tr style="${offset === 0 ? "background:rgba(56,189,248,0.08);" : ""}">
+            <td><strong>${slotLabel}</strong></td>
+            <td>${Math.round(wSim.avgSpd)} mph from ${wSim.avgDir}°</td>
+            <td style="color:${tail ? "var(--ok)" : "var(--warn)"}; font-weight:700;">${tail ? "+" : ""}${Math.round(wSim.windComp)} mph ${tail ? "Tailwind" : "Headwind"}</td>
+            <td><strong>${Math.round(wSim.groundSpeed)} mph</strong></td>
+            <td>${fmtDur(wSim.actualMins)}</td>
+            <td style="color:${wSim.diffMins <= 0 ? "var(--ok)" : "var(--warn)"}; font-weight:700;">${wSim.diffMins <= 0 ? Math.abs(wSim.diffMins) + "m early" : "+" + wSim.diffMins + "m late"}</td>
+          </tr>`);
+        }
+        document.getElementById("flightWindowBody").innerHTML = winRows.join("");
+
+        // 7-Day Daily Impact Table
+        const depHourStr = times[idx].slice(11, 16);
+        const dailyRowsHtml = [];
+        for (let h = idx % 24; h < times.length; h += 24) {
+          const dSim = computeRouteAtHour(h);
+          const dDate = times[h].slice(0, 10);
+          const tail = dSim.windComp >= 0;
+          dailyRowsHtml.push(`<tr>
+            <td><strong>${dDate}</strong> (${depHourStr})</td>
+            <td>${Math.round(dSim.avgSpd)} mph from ${dSim.avgDir}°</td>
+            <td style="color:${tail ? "var(--ok)" : "var(--warn)"}; font-weight:700;">${tail ? "+" : ""}${Math.round(dSim.windComp)} mph ${tail ? "Tailwind" : "Headwind"}</td>
+            <td>${Math.round(tas)} mph</td>
+            <td><strong>${Math.round(dSim.groundSpeed)} mph</strong></td>
+            <td>${fmtDur(dSim.actualMins)}</td>
+            <td style="color:${dSim.diffMins <= 0 ? "var(--ok)" : "var(--warn)"}; font-weight:700;">${dSim.diffMins <= 0 ? Math.abs(dSim.diffMins) + "m early" : "+" + dSim.diffMins + "m late"}</td>
+          </tr>`);
+        }
+        document.getElementById("flightDailyBody").innerHTML = dailyRowsHtml.join("");
+        fStatus.textContent = `Simulated ${c1} → ${c2} at ${level} using 3 great-circle waypoints & 35 North America upper-air grid nodes.`;
+      } catch (err) {
+        fStatus.textContent = "Unable to load upper-air wind grid: " + err.message;
+      }
+    }
+
+    document.getElementById("goBtn").addEventListener("click", runForecast);
+    document.getElementById("zipInput").addEventListener("keydown", e => { if (e.key === "Enter") runForecast(); });
+    document.getElementById("stationSelect").addEventListener("change", () => loadGroundObs(document.getElementById("stationSelect").value));
+    document.getElementById("daysSelect").addEventListener("change", runForecast);
+    document.getElementById("calcFlightBtn").addEventListener("click", runFlightSim);
+
+    document.getElementById("shareBtn").addEventListener("click", async () => {
+      const shareData = { title: "Blue Water & Thumb Weather + Jet Command", url: window.location.href };
+      if (navigator.share) await navigator.share(shareData).catch(() => {});
+      else if (navigator.clipboard) {
+        await navigator.clipboard.writeText(window.location.href);
+        alert("App URL copied! On iPhone/Android, tap Share -> Add to Home Screen to install as a native app.");
+      }
+    });
+
+    document.getElementById("zipInput").value = localStorage.getItem("bw_last_zip") || "48049";
+    document.getElementById("cwopId").value = localStorage.getItem("bw_cwop_id") || "";
+    document.getElementById("cwopHost").value = localStorage.getItem("bw_cwop_host") || "http://localhost:8085";
+    document.getElementById("pwsId").value = localStorage.getItem("bw_pws_id") || "";
+    document.getElementById("pwsKey").value = localStorage.getItem("bw_pws_key") || "";
+
+    const now = new Date();
+    now.setMinutes(0, 0, 0);
+    document.getElementById("flightDate").value = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+
+    runForecast();
+  </script>
+</body>
+</html>

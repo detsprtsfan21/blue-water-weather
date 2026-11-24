@@ -41,7 +41,6 @@
     }
     .wrap { max-width: 1180px; margin: 0 auto; }
 
-    /* Header & App Navigation Bar */
     header {
       display: flex; flex-wrap: wrap; justify-content: space-between;
       align-items: center; gap: 12px; margin-bottom: 14px;
@@ -74,7 +73,6 @@
     .view-section { display: none; }
     .view-section.active { display: block; }
 
-    /* Active Severe Weather Alert Banner */
     .alert-banner {
       display: none;
       background: rgba(244, 63, 94, 0.16);
@@ -88,7 +86,6 @@
     .alert-banner.visible { display: block; }
     .alert-banner strong { color: #fda4af; text-transform: uppercase; letter-spacing: 0.04em; }
 
-    /* Controls */
     .controls {
       display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
       background: var(--panel); backdrop-filter: blur(12px);
@@ -142,7 +139,7 @@
     .anim-snow-3 { animation: snowDrift 2.2s ease-in-out 1.4s infinite; }
     .anim-bolt { animation: flashBolt 2.4s infinite; }
 
-    /* Hero Current Conditions + Cloud Base + Density Altitude + Frost */
+    /* Hero Current Conditions */
     .hero {
       display: grid; grid-template-columns: 1fr; gap: 14px;
       background: linear-gradient(145deg, rgba(20, 35, 52, 0.95), rgba(13, 21, 32, 0.95));
@@ -177,7 +174,7 @@
     .badge-mvfr { color: var(--warn); font-weight: 800; }
     .badge-ifr { color: var(--alert); font-weight: 800; }
 
-    /* Live Ground Station, CWOP Bridge & WU PWS Strip */
+    /* Live Ground Station */
     .obs-strip {
       background: var(--panel); border: 1px solid var(--border);
       border-radius: 14px; padding: 13px 15px; margin-bottom: 16px;
@@ -196,7 +193,7 @@
     .pws-form input { width: 140px; font-size: 0.8rem; padding: 6px 9px; }
     .pws-form button { font-size: 0.8rem; padding: 6px 11px; }
 
-    /* Cross-Border US + Canadian Radar Panel + Timeline Scrubber */
+    /* Cross-Border Radar */
     .radar-card {
       background: var(--panel); border: 1px solid var(--border-strong);
       border-radius: 14px; padding: 14px; margin-bottom: 18px;
@@ -215,7 +212,7 @@
     }
     #radarMap {
       height: 370px; width: 100%; border-radius: 12px;
-      border: 1px solid var(--border); background: #09111a; z-index: 1;
+      border: 1px solid var(--border); background: #0c1622; z-index: 1;
     }
     .radar-scrubber {
       display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
@@ -228,6 +225,10 @@
     .radar-caption {
       font-size: 0.78rem; color: var(--muted); margin-top: 8px;
       display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px;
+    }
+    /* Darken standard OSM basemap tiles cleanly without needing any API key */
+    .dark-osm-tiles {
+      filter: invert(100%) hue-rotate(180deg) brightness(88%) contrast(92%) saturate(60%);
     }
 
     /* Briefings & Model Bars */
@@ -360,10 +361,10 @@
 
       <div class="status-bar" id="statusBar">Initializing 48049 multi-model forecast, cloud base &amp; cross-border radar...</div>
 
-      <!-- Hero Conditions + Cloud Base Indicator + Frost/Icing -->
+      <!-- Hero Conditions -->
       <section class="hero" id="heroBox"></section>
 
-      <!-- Real-Time Ground Truth (CWOP Bridge + NWS Station + Optional Weather Underground PWS) -->
+      <!-- Real-Time Ground Truth -->
       <section class="obs-strip">
         <div class="obs-top">
           <div class="obs-info" id="obsText">
@@ -379,7 +380,7 @@
         </div>
       </section>
 
-      <!-- Combined US + Canadian Interactive Radar + Scrubber -->
+      <!-- Combined US + Canadian Interactive Radar -->
       <section class="radar-card">
         <div class="radar-toolbar">
           <div>
@@ -402,7 +403,7 @@
         </div>
         <div class="radar-caption">
           <span id="radarStatus">Radar layer: Combined US NEXRAD + Environment Canada 1km Composite</span>
-          <span>Data: ECCC MSC GeoMet WMS &amp; <a href="https://www.rainviewer.com" target="_blank" rel="noopener" style="color:var(--accent);">RainViewer</a></span>
+          <span>Data: OpenStreetMap, ECCC MSC GeoMet WMS &amp; <a href="https://www.rainviewer.com" target="_blank" rel="noopener" style="color:var(--accent);">RainViewer</a></span>
         </div>
       </section>
 
@@ -487,7 +488,6 @@
 
       <div class="status-bar" id="flightStatus">Sampling North America upper-level wind grid (250 hPa)...</div>
 
-      <!-- Visual North America Jet Stream Map & Corridor Overlay -->
       <div class="jet-canvas-wrap">
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
           <strong style="font-size:0.96rem;">North America Upper-Level Jet Stream &amp; Flight Corridor Impact</strong>
@@ -496,10 +496,8 @@
         <canvas id="jetCanvas" width="960" height="460"></canvas>
       </div>
 
-      <!-- Flight Metrics Cards -->
       <section class="flight-cards" id="flightCards"></section>
 
-      <!-- Departure Window Optimizer (+/- 3 Hours) -->
       <h2>Departure Window Optimizer (&plusmn;3 Hours Around Target Takeoff)</h2>
       <div class="table-wrap" style="margin-bottom:18px;">
         <table>
@@ -517,7 +515,6 @@
         </table>
       </div>
 
-      <!-- 7-Day Daily Flight Duration Impact Table -->
       <h2>Daily Flight Ground Speed &amp; Arrival Impact (Next 7 Days at Same Departure Hour)</h2>
       <div class="table-wrap">
         <table>
@@ -587,7 +584,6 @@
       ICON: "German (ICON)", WN2: "WeatherNext 2 AI"
     };
 
-    // Tab Switcher
     document.querySelectorAll(".nav-tab").forEach(btn => {
       btn.addEventListener("click", () => {
         document.querySelectorAll(".nav-tab").forEach(b => b.classList.remove("active"));
@@ -693,7 +689,7 @@
       }
     }
 
-    // ==================== INTERACTIVE US + CANADIAN RADAR + ANIMATED SCRUBBER ====================
+    // ==================== INTERACTIVE US + CANADIAN RADAR (NO API KEY REQUIRED) ====================
     let radarMap = null;
     let rvTileLayers = [];
     let rvFrames = [];
@@ -719,7 +715,7 @@
         const dt = new Date(frame.time * 1000).toLocaleTimeString("en-US", {
           timeZone: "America/Detroit", hour: "2-digit", minute: "2-digit"
         });
-        document.getElementById("radarFrameTime").textContent = `${dt} EDT`;
+        document.getElementById("radarFrameTime").textContent = `${dt} EST/EDT`;
         document.getElementById("radarSlider").value = String(idx);
       }
     }
@@ -727,9 +723,11 @@
     async function initRadar(lat, lon) {
       if (!radarMap) {
         radarMap = L.map("radarMap", { zoomControl: true }).setView([lat, lon], 7);
-        L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-          attribution: "&copy; OpenStreetMap &copy; CARTO",
-          maxZoom: 14
+        // Standard OpenStreetMap tiles (100% free, zero API keys, darkened via CSS class)
+        L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          attribution: "&copy; OpenStreetMap contributors",
+          maxZoom: 14,
+          className: "dark-osm-tiles"
         }).addTo(radarMap);
 
         ecccRainWms = L.tileLayer.wms("https://geo.weather.gc.ca/geomet?", {
@@ -759,9 +757,9 @@
           }
         } catch (e) {}
 
-        L.circleMarker([42.99, -82.58], { radius: 6, color: "#38bdf8", fillOpacity: 0.9 }).addTo(radarMap).bindPopup("48049 Ruby / North Street");
-        L.circleMarker([42.70, -83.47], { radius: 5, color: "#10b981", fillOpacity: 0.8 }).addTo(radarMap).bindPopup("KDTX NEXRAD (White Lake, MI)");
-        L.circleMarker([43.37, -81.38], { radius: 5, color: "#f59e0b", fillOpacity: 0.8 }).addTo(radarMap).bindPopup("CASET Radar (Exeter, ON)");
+        L.circleMarker([42.99, -82.58], { radius: 6, color: "#38bdf8", fillOpacity: 0.95 }).addTo(radarMap).bindPopup("48049 Ruby / North Street");
+        L.circleMarker([42.70, -83.47], { radius: 5, color: "#10b981", fillOpacity: 0.85 }).addTo(radarMap).bindPopup("KDTX NEXRAD (White Lake, MI)");
+        L.circleMarker([43.37, -81.38], { radius: 5, color: "#f59e0b", fillOpacity: 0.85 }).addTo(radarMap).bindPopup("CASET Radar (Exeter, ON)");
       } else {
         radarMap.setView([lat, lon], 7);
       }
@@ -820,7 +818,7 @@
       }
     });
 
-    // ==================== LIVE GROUND OBSERVATIONS (CWOP BRIDGE -> WU PWS -> NWS METAR) ====================
+    // ==================== LIVE GROUND OBSERVATIONS ====================
     async function loadGroundObs(stationId) {
       const obsEl = document.getElementById("obsText");
       const cwopId = (localStorage.getItem("bw_cwop_id") || "").trim();
@@ -828,7 +826,6 @@
       const pwsId = (localStorage.getItem("bw_pws_id") || "").trim();
       const pwsKey = (localStorage.getItem("bw_pws_key") || "").trim();
 
-      // 1. Try local Python CWOP/APRS Bridge if a CWOP station ID is entered
       if (cwopId && cwopHost) {
         try {
           const cRes = await fetch(`${cwopHost}/cwop?station=${encodeURIComponent(cwopId)}`);
@@ -842,7 +839,6 @@
         } catch (e) {}
       }
 
-      // 2. Try Weather Underground PWS if configured
       if (pwsId && pwsKey) {
         try {
           const wuUrl = `https://api.weather.com/v2/pws/observations/current?stationId=${encodeURIComponent(pwsId)}&format=json&units=e&apiKey=${encodeURIComponent(pwsKey)}`;
@@ -860,7 +856,6 @@
         } catch (e) {}
       }
 
-      // 3. Default Zero-Key Official NWS / CWOP-linked Station Observation
       try {
         const res = await fetch(`https://api.weather.gov/stations/${stationId}/observations/latest`, {
           headers: { "Accept": "application/geo+json" }
@@ -889,7 +884,7 @@
       loadGroundObs(document.getElementById("stationSelect").value);
     });
 
-    // ==================== MAIN MULTI-MODEL FORECAST ====================
+    // ==================== MAIN MULTI-MODEL FORECAST (WITH AUTOMATIC FALLBACK) ====================
     async function lookupLocalZip(zip) {
       if (BUILTIN_ZIPS[zip]) {
         const b = BUILTIN_ZIPS[zip];
@@ -904,6 +899,45 @@
         lat: place.latitude, lon: place.longitude,
         miles: Math.round(haversineMiles(ANCHOR_LAT, ANCHOR_LON, place.latitude, place.longitude))
       };
+    }
+
+    async function fetchDeterministicSafe(lat, lon, days) {
+      const common = {
+        latitude: lat,
+        longitude: lon,
+        timezone: "America/Detroit",
+        temperature_unit: "fahrenheit",
+        wind_speed_unit: "mph",
+        precipitation_unit: "inch",
+        forecast_days: days
+      };
+
+      // Attempt 1: Full multi-model + reflectivity_max
+      const fullParams = new URLSearchParams({
+        ...common,
+        models: Object.values(MODELS).join(","),
+        hourly: "temperature_2m,dew_point_2m,apparent_temperature,precipitation_probability,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m,temperature_850hPa,reflectivity_max"
+      });
+      let res = await fetch(`https://api.open-meteo.com/v1/forecast?${fullParams}`);
+      if (res.ok) return await res.json();
+
+      // Attempt 2: Standard core models without reflectivity_max (in case a model retired or rejected dBZ)
+      const coreParams = new URLSearchParams({
+        ...common,
+        models: "ncep_nbm_conus,ecmwf_ifs025,gfs_seamless,gem_seamless,icon_seamless",
+        hourly: "temperature_2m,dew_point_2m,apparent_temperature,precipitation_probability,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m,temperature_850hPa"
+      });
+      res = await fetch(`https://api.open-meteo.com/v1/forecast?${coreParams}`);
+      if (res.ok) return await res.json();
+
+      // Attempt 3: Default Open-Meteo best-match fallback
+      const bestParams = new URLSearchParams({
+        ...common,
+        hourly: "temperature_2m,dew_point_2m,apparent_temperature,precipitation_probability,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m,temperature_850hPa"
+      });
+      res = await fetch(`https://api.open-meteo.com/v1/forecast?${bestParams}`);
+      if (!res.ok) throw new Error(`Weather API unavailable (${res.status}).`);
+      return await res.json();
     }
 
     async function runForecast() {
@@ -923,30 +957,17 @@
         loadGroundObs(station);
         loadNwsAlerts(loc.lat, loc.lon);
 
-        const baseParams = new URLSearchParams({
-          latitude: loc.lat,
-          longitude: loc.lon,
-          timezone: "America/Detroit",
-          temperature_unit: "fahrenheit",
-          wind_speed_unit: "mph",
-          precipitation_unit: "inch",
-          forecast_days: days,
-          models: Object.values(MODELS).join(","),
-          hourly: "temperature_2m,dew_point_2m,apparent_temperature,precipitation_probability,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m,temperature_850hPa,reflectivity_max"
-        });
-
         const ensParams = new URLSearchParams({
           latitude: loc.lat, longitude: loc.lon, timezone: "America/Detroit",
           temperature_unit: "fahrenheit", forecast_days: days,
           models: "google_weathernext2_ensemble", hourly: "temperature_2m"
         });
 
-        const [detRes, ensRes] = await Promise.all([
-          fetch(`https://api.open-meteo.com/v1/forecast?${baseParams}`),
+        const [detData, ensRes] = await Promise.all([
+          fetchDeterministicSafe(loc.lat, loc.lon, days),
           fetch(`https://ensemble-api.open-meteo.com/v1/ensemble?${ensParams}`).catch(() => null)
         ]);
 
-        const detData = await detRes.json();
         const ensData = ensRes && ensRes.ok ? await ensRes.json() : null;
         const hourly = detData.hourly || {};
         const times = hourly.time || [];
@@ -954,7 +975,8 @@
         const ensKeys = Object.keys(ensHourly).filter(k => k.startsWith("temperature_2m_member"));
 
         const nowIso = new Date().toLocaleString("sv-SE", { timeZone: "America/Detroit" }).replace(" ", "T").slice(0, 13) + ":00";
-        let startIdx = Math.max(0, times.findIndex(t => t >= nowIso));
+        let startIdx = times.findIndex(t => t >= nowIso);
+        if (startIdx < 0) startIdx = 0;
         const endIdx = Math.min(startIdx + days * 24, times.length);
 
         const pickVal = (prefix, order, i) => {
@@ -962,6 +984,8 @@
             const arr = hourly[`${prefix}_${MODELS[m]}`];
             if (Array.isArray(arr) && arr[i] != null) return arr[i];
           }
+          // Fallback to unsuffixed array if best-match fallback was used
+          if (Array.isArray(hourly[prefix]) && hourly[prefix][i] != null) return hourly[prefix][i];
           return null;
         };
 
@@ -972,6 +996,9 @@
           for (const [label, id] of Object.entries(MODELS)) {
             const arr = hourly[`temperature_2m_${id}`];
             if (Array.isArray(arr) && arr[i] != null) temps[label] = arr[i];
+          }
+          if (!Object.keys(temps).length && Array.isArray(hourly.temperature_2m) && hourly.temperature_2m[i] != null) {
+            temps.BEST = hourly.temperature_2m[i];
           }
           const wn2Vals = ensKeys.map(k => ensHourly[k]?.[i]).filter(v => v != null);
           if (wn2Vals.length) temps.WN2 = wn2Vals.reduce((a, b) => a + b, 0) / wn2Vals.length;
@@ -1023,6 +1050,10 @@
           });
         }
 
+        if (!rows.length) {
+          throw new Error("Forecast API returned no hourly rows. Tap Update All to retry.");
+        }
+
         const cur = rows[0];
         const cat = flightCategory(cur.cloudBaseFt);
         const frost = frostRiskLabel(cur.wtd, cur.dew);
@@ -1072,11 +1103,12 @@
         const stRows = rows.slice(0, 48);
         const stMin = Math.min(...stRows.map(r => r.wtd)), stMax = Math.max(...stRows.map(r => r.wtd));
         const stMaxPop = Math.max(...stRows.map(r => r.pop ?? 0));
-        const minBase = Math.min(...stRows.map(r => r.cloudBaseFt ?? 9999));
+        const validBases = stRows.map(r => r.cloudBaseFt).filter(v => v != null);
+        const minBase = validBases.length ? Math.min(...validBases) : null;
         document.getElementById("briefingsBox").innerHTML = `
           <div class="brief-card">
             <span class="brief-badge">Short-Term Briefing (48 Hours)</span>
-            <p>Temperatures in ${loc.name} will cycle between <strong>${Math.round(stMin)}°F and ${Math.round(stMax)}°F</strong> with peak precipitation odds near <strong>${stMaxPop}%</strong>. Lowest cloud bases drop to roughly <strong>${minBase.toLocaleString()} ft AGL</strong>.</p>
+            <p>Temperatures in ${loc.name} will cycle between <strong>${Math.round(stMin)}°F and ${Math.round(stMax)}°F</strong> with peak precipitation odds near <strong>${stMaxPop}%</strong>.${minBase != null ? ` Lowest cloud bases drop to roughly <strong>${minBase.toLocaleString()} ft AGL</strong>.` : ""}</p>
             <div class="model-note"><strong>Model Spread:</strong> Models currently sit ${cur.spread.toFixed(1)}°F apart (${cur.loModel} coldest, ${cur.hiModel} warmest).</div>
           </div>
           <div class="brief-card">
@@ -1352,7 +1384,6 @@
           </div>
         `;
 
-        // Departure Window Optimizer (+/- 3 Hours)
         const winRows = [];
         for (let offset = -3; offset <= 3; offset++) {
           const hIdx = idx + offset;
@@ -1371,7 +1402,6 @@
         }
         document.getElementById("flightWindowBody").innerHTML = winRows.join("");
 
-        // 7-Day Daily Impact Table
         const depHourStr = times[idx].slice(11, 16);
         const dailyRowsHtml = [];
         for (let h = idx % 24; h < times.length; h += 24) {

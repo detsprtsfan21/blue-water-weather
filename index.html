@@ -224,6 +224,25 @@
     .risk-mod { color: var(--warn); font-weight: 800; }
     .risk-low { color: var(--ok); font-weight: 800; }
 
+
+    .audio-link-btn {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: rgba(56, 189, 248, 0.13); border: 1px solid rgba(56, 189, 248, 0.34);
+      color: #7dd3fc; border-radius: 999px; padding: 2px 9px;
+      font-size: 0.71rem; font-weight: 700; cursor: pointer;
+      min-height: 25px; vertical-align: middle; margin-left: 6px;
+      text-decoration: none; transition: all 0.16s ease;
+    }
+    .audio-link-btn:hover {
+      background: rgba(56, 189, 248, 0.28); color: #ffffff;
+    }
+    .audio-link-btn.speaking {
+      background: rgba(16, 185, 129, 0.28); border-color: var(--ok); color: #ffffff;
+      box-shadow: 0 0 10px rgba(16, 185, 129, 0.35);
+    }
+    .day-audio-wrap { margin-top: 6px; }
+    .day-audio-wrap .audio-link-btn { margin-left: 0; font-size: 0.69rem; min-height: 24px; padding: 1px 8px; }
+
     /* Micro-climate Strip */
     .micro-strip {
       display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
@@ -439,7 +458,8 @@
       <button class="primary" id="goBtn">Update Local</button>
       <button class="secondary" id="gpsBtn" title="Auto-detect current GPS location">Auto-GPS</button>
       <button class="secondary" id="saveZipBtn" title="Pin current ZIP">+ Pin ZIP</button>
-      <button class="secondary" id="voiceBtn" title="Speak concise local briefing">Voice Brief</button>
+      <button class="secondary" id="autoVoiceToggleBtn" title="Toggle automatic voice-over on forecast updates">Auto Voice: ON</button>
+      <button class="secondary" id="stopVoiceBtn" title="Stop current speech">Stop Audio</button>
       <button class="secondary" id="exportCsvBtn" title="Export CSV">CSV</button>
       <button class="secondary" id="exportJsonBtn" title="Export JSON">JSON</button>
       <button class="secondary" id="shareBtn">Share / App</button>
@@ -1089,14 +1109,20 @@
       }
 
       badge.textContent = `${destinations.length} Nearby Targets`;
-      grid.innerHTML = destinations.map((d, i) => `
+      grid.innerHTML = destinations.map((d, i) => {
+        const destSpeech = `${d.category}: ${d.title}, ${d.distMi.toFixed(1)} miles away. Current conditions: ${d.wxText}.`;
+        return `
         <div class="dest-card" data-dest-idx="${i}">
-          <span class="cat-pill">${d.category}</span>
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:6px;">
+            <span class="cat-pill">${d.category}</span>
+            <a href="#listen-dest" class="audio-link-btn" data-audio-desc="${encodeURIComponent(destSpeech)}">🔊 Audio</a>
+          </div>
           <div class="d-title">${d.title}</div>
           <div class="d-meta">${d.distMi.toFixed(1)} miles from current location</div>
           <div class="d-wx">${d.wxText}</div>
         </div>
-      `).join("");
+      `;
+      }).join("");
 
       grid.querySelectorAll(".dest-card").forEach(card => {
         card.addEventListener("click", async () => {
@@ -1162,10 +1188,13 @@
         const tempDelta = (nB.t - nA.t).toFixed(1), minVis = Math.min(nA.visMi, nMid.visMi, nB.visMi);
         const fogAlert = minVis < 2.0 || (nMid.t - nMid.d) <= 2.2;
 
+        const spA = `Origin ${nA.label}: ${Math.round(nA.t)} degrees, wind ${Math.round(nA.w)} miles per hour, gusts ${Math.round(nA.g)}. ${nA.lag.status}. ${nA.lag.detail}.`;
+        const spMid = `Corridor midpoint across ${distMi} miles: ${Math.round(nMid.t)} degrees, minimum visibility ${minVis.toFixed(1)} miles. ${fogAlert ? "Patchy fog risk." : "Clear visibility."} End to end temperature change ${tempDelta} degrees.`;
+        const spB = `Destination ${nB.label}: ${Math.round(nB.t)} degrees, wind ${Math.round(nB.w)} miles per hour, gusts ${Math.round(nB.g)}. ${nB.lag.status}. ${nB.lag.detail}.`;
         grid.innerHTML = `
-          <div class="c-card"><div class="k">Start: ${nA.label}</div><div class="v">${Math.round(nA.t)}°F · Wind ${Math.round(nA.w)} mph (G ${Math.round(nA.g)})</div><div class="d ${nA.lag.cls}">${nA.lag.status} · ${nA.lag.detail}</div></div>
-          <div class="c-card"><div class="k">Midpoint &amp; Visibility (${distMi} mi)</div><div class="v">${Math.round(nMid.t)}°F · Vis ${minVis.toFixed(1)} mi</div><div class="d ${fogAlert ? "risk-mod" : "risk-low"}">${fogAlert ? "Patchy Fog / Low Dew Spread" : "Clear Visibility"} · Delta ${tempDelta > 0 ? "+" + tempDelta : tempDelta}°F</div></div>
-          <div class="c-card"><div class="k">End: ${nB.label}</div><div class="v">${Math.round(nB.t)}°F · Wind ${Math.round(nB.w)} mph (G ${Math.round(nB.g)})</div><div class="d ${nB.lag.cls}">${nB.lag.status} · ${nB.lag.detail}</div></div>
+          <div class="c-card"><div class="k">Start: ${nA.label} <a href="#listen-c1" class="audio-link-btn" data-audio-desc="${encodeURIComponent(spA)}">🔊</a></div><div class="v">${Math.round(nA.t)}°F · Wind ${Math.round(nA.w)} mph (G ${Math.round(nA.g)})</div><div class="d ${nA.lag.cls}">${nA.lag.status} · ${nA.lag.detail}</div></div>
+          <div class="c-card"><div class="k">Midpoint (${distMi} mi) <a href="#listen-c2" class="audio-link-btn" data-audio-desc="${encodeURIComponent(spMid)}">🔊</a></div><div class="v">${Math.round(nMid.t)}°F · Vis ${minVis.toFixed(1)} mi</div><div class="d ${fogAlert ? "risk-mod" : "risk-low"}">${fogAlert ? "Patchy Fog / Low Dew Spread" : "Clear Visibility"} · Delta ${tempDelta > 0 ? "+" + tempDelta : tempDelta}°F</div></div>
+          <div class="c-card"><div class="k">End: ${nB.label} <a href="#listen-c3" class="audio-link-btn" data-audio-desc="${encodeURIComponent(spB)}">🔊</a></div><div class="v">${Math.round(nB.t)}°F · Wind ${Math.round(nB.w)} mph (G ${Math.round(nB.g)})</div><div class="d ${nB.lag.cls}">${nB.lag.status} · ${nB.lag.detail}</div></div>
         `;
       } catch (e) {
         grid.innerHTML = `<div class="c-card"><div class="k">Commute Corridor</div><div class="d">Enter valid 5-digit ZIP codes to compare corridor.</div></div>`;
@@ -1315,10 +1344,13 @@
         const peak24Chop = next24.length ? Math.max(...next24.map(x => x.riverChopFt)).toFixed(1) : curWave.riverChopFt;
         const peak72Row = next72.reduce((best, r) => r.sigWaveFt > best.sigWaveFt ? r : best, next72[0] || curWave);
 
+        const mSp1 = `24 hour Lake Huron and river forecast: waves up to ${peak24Wave} feet, Saint Clair River chop up to ${peak24Chop} feet. ${nwsMarineSummary}`;
+        const mSp2 = `72 hour peak marine window: ${peak72Row.sigWaveFt} foot waves with ${degToCardinal(peak72Row.dir)} winds at ${Math.round(peak72Row.wind)} miles per hour and river chop ${peak72Row.riverChopFt} feet.`;
+        const mSp3 = `River water level trend: Saint Clair River at ${noaaWaterLevel}, ${noaaTrendLabel}. Black River stage ${usgsBlackRiverFt}, ${usgsBlackTrend}.`;
         fcstGrid.innerHTML = `
-          <div class="m-card"><div class="k">24-Hr Lake &amp; River Forecast</div><div class="v">Waves ${peak24Wave} ft · Chop ${peak24Chop} ft</div><div class="d">${nwsMarineSummary}</div></div>
-          <div class="m-card"><div class="k">72-Hr Peak Marine Window</div><div class="v">${peak72Row.sigWaveFt} ft @ ${peak72Row.ts ? peak72Row.ts.replace("T", " ").slice(5, 16) : "—"}</div><div class="d">Wind ${degToCardinal(peak72Row.dir)} ${Math.round(peak72Row.wind)} mph · Chop ${peak72Row.riverChopFt} ft</div></div>
-          <div class="m-card"><div class="k">River Water Level Trend</div><div class="v">${noaaTrendLabel}</div><div class="d">Black River: ${usgsBlackRiverFt} (${usgsBlackTrend})</div></div>
+          <div class="m-card"><div class="k">24-Hr Lake &amp; River Forecast <a href="#listen-m1" class="audio-link-btn" data-audio-desc="${encodeURIComponent(mSp1)}">🔊 Audio</a></div><div class="v">Waves ${peak24Wave} ft · Chop ${peak24Chop} ft</div><div class="d">${nwsMarineSummary}</div></div>
+          <div class="m-card"><div class="k">72-Hr Peak Marine Window <a href="#listen-m2" class="audio-link-btn" data-audio-desc="${encodeURIComponent(mSp2)}">🔊 Audio</a></div><div class="v">${peak72Row.sigWaveFt} ft @ ${peak72Row.ts ? peak72Row.ts.replace("T", " ").slice(5, 16) : "—"}</div><div class="d">Wind ${degToCardinal(peak72Row.dir)} ${Math.round(peak72Row.wind)} mph · Chop ${peak72Row.riverChopFt} ft</div></div>
+          <div class="m-card"><div class="k">River Water Level Trend <a href="#listen-m3" class="audio-link-btn" data-audio-desc="${encodeURIComponent(mSp3)}">🔊 Audio</a></div><div class="v">${noaaTrendLabel}</div><div class="d">Black River: ${usgsBlackRiverFt} (${usgsBlackTrend})</div></div>
         `;
 
         riverGrid.innerHTML = `
@@ -1331,7 +1363,9 @@
         tbody.innerHTML = Array.from({ length: Math.min(32, Math.floor((times.length - startIdx) / 3)) }, (_, k) => {
           const i = startIdx + k * 3, w = h.wind_speed_10m?.[i] ?? 0, g = h.wind_gusts_10m?.[i] ?? 0, d = h.wind_direction_10m?.[i] ?? 0;
           const wv = estimateLakeHuronWaves(w, d);
-          return `<tr><td>${times[i].replace("T", " ").slice(5, 16)}</td><td>${degToCardinal(d)} ${Math.round(w)} mph (G ${Math.round(g)})</td><td>${wv.fetchMi} mi (${degToCardinal(d)})</td><td><strong>${wv.sigWaveFt} ft</strong></td><td>${wv.periodSec}s</td><td>${wv.riverChopFt} ft</td><td class="${wv.cls}">${wv.advisory}</td></tr>`;
+          const mTime = times[i].replace("T", " ").slice(5, 16);
+          const mRowSpeech = `Marine forecast ${mTime}: ${degToCardinal(d)} wind ${Math.round(w)} miles per hour, gusts ${Math.round(g)}, Lake Huron waves ${wv.sigWaveFt} feet, river chop ${wv.riverChopFt} feet. ${wv.advisory}.`;
+          return `<tr><td>${mTime} <a href="#listen-mrow" class="audio-link-btn" data-audio-desc="${encodeURIComponent(mRowSpeech)}">🔊</a></td><td>${degToCardinal(d)} ${Math.round(w)} mph (G ${Math.round(g)})</td><td>${wv.fetchMi} mi (${degToCardinal(d)})</td><td><strong>${wv.sigWaveFt} ft</strong></td><td>${wv.periodSec}s</td><td>${wv.riverChopFt} ft</td><td class="${wv.cls}">${wv.advisory}</td></tr>`;
         }).join("");
         statusEl.textContent = "Updated: Southern Lake Huron (43.15°N, 82.35°W), NWS Marine & NOAA/USGS Gauges.";
       } catch (err) {
@@ -1412,8 +1446,9 @@
       const absLat = Math.abs(loc.lat);
       const auroraNote = absLat >= 45 ? "High mid-latitude aurora potential (Kp 4–5+)." : absLat >= 41 ? "Northern-horizon aurora glow possible during Kp 5–6+ storms." : "Requires strong storm (Kp 7+) for northern glow.";
 
+      const skySp1 = `Sun and moon for ${loc.name}: sunrise ${sunToday.sunrise}, sunset ${sunToday.sunset}. Moon phase is ${moon.name} at ${moon.illum} percent illumination, moonrise ${moon.moonrise}, moonset ${moon.moonset}.`;
       document.getElementById("astronomyGrid").innerHTML = `
-        <div class="sky-card"><h3>Sun &amp; Moon (${loc.zip})</h3><div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">${getMoonPhaseSvg(moon.illum, moon.ageDays, 40)}<div><strong>${moon.name}</strong><div style="font-size:0.78rem;color:var(--muted);">~${moon.illum}% illuminated · Day ${moon.ageDays}</div></div></div><ul><li><strong>Sunrise / Sunset:</strong> ${sunToday.sunrise} / ${sunToday.sunset}</li><li><strong>Moonrise / Moonset:</strong> ${moon.moonrise} / ${moon.moonset}</li></ul></div>
+        <div class="sky-card"><h3>Sun &amp; Moon (${loc.zip}) <a href="#listen-sky" class="audio-link-btn" data-audio-desc="${encodeURIComponent(skySp1)}">🔊 Audio</a></h3><div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">${getMoonPhaseSvg(moon.illum, moon.ageDays, 40)}<div><strong>${moon.name}</strong><div style="font-size:0.78rem;color:var(--muted);">~${moon.illum}% illuminated · Day ${moon.ageDays}</div></div></div><ul><li><strong>Sunrise / Sunset:</strong> ${sunToday.sunrise} / ${sunToday.sunset}</li><li><strong>Moonrise / Moonset:</strong> ${moon.moonrise} / ${moon.moonset}</li></ul></div>
         <div class="sky-card"><h3>Visible Planets &amp; Comets</h3><ul><li><strong>Jupiter &amp; Saturn:</strong> Key ecliptic targets; Jupiter's Galilean moons visible in binoculars.</li><li><strong>Venus &amp; Mars:</strong> Dawn/dusk horizon visibility along ecliptic arc.</li><li><strong>Comets:</strong> Scan dark skies away from streetlights during low moon illumination.</li></ul></div>
         <div class="sky-card"><h3>Meteor Showers &amp; ISS Overhead</h3><ul><li><strong>Geminids:</strong> Peak ~Dec 13–14 · <strong>Quadrantids:</strong> Peak ~Jan 3–4</li><li><strong>Lyrids:</strong> Apr 22–23 · <strong>Perseids:</strong> Aug 11–12 · <strong>Orionids:</strong> Oct 21–22</li><li><strong>ISS Passes:</strong> Look 1–3h post-sunset or pre-dawn when ${loc.zip} is dark and ISS is sunlit.</li></ul></div>
         <div class="sky-card"><h3>Northern Lights (${loc.lat.toFixed(1)}°N)</h3><ul><li>${auroraNote}</li><li>Best with clear northern skies (&lt;25% cloud cover) during geomagnetic storm alerts.</li></ul></div>
@@ -1569,8 +1604,9 @@
         drawNorthAmericaJetMap(windGrid, orig, dest, curFlight.windComp);
 
         const isTail = curFlight.windComp >= 0;
+        const flSp = `Flight route ${c1} to ${c2}, distance ${Math.round(route.dist)} miles at ${level}. True airspeed ${Math.round(tas)} miles per hour, actual ground speed ${Math.round(curFlight.groundSpeed)} miles per hour with a ${Math.abs(Math.round(curFlight.windComp))} mile per hour ${isTail ? "tailwind" : "headwind"}. Estimated cruise duration ${fmtDur(curFlight.actualMins)}, which is ${Math.abs(curFlight.diffMins)} minutes ${curFlight.diffMins <= 0 ? "faster" : "slower"} than still air.`;
         document.getElementById("flightCards").innerHTML = `
-          <div class="f-card"><div class="k">Airspeed vs. Ground Speed</div><div class="v">${Math.round(tas)} mph → ${Math.round(curFlight.groundSpeed)} mph</div><div class="d">${c1} → ${c2} (${Math.round(route.dist)} mi · Course ${Math.round(route.bearing)}°)</div></div>
+          <div class="f-card"><div class="k">Airspeed vs. Ground Speed <a href="#listen-flt" class="audio-link-btn" data-audio-desc="${encodeURIComponent(flSp)}">🔊 Audio</a></div><div class="v">${Math.round(tas)} mph → ${Math.round(curFlight.groundSpeed)} mph</div><div class="d">${c1} → ${c2} (${Math.round(route.dist)} mi · Course ${Math.round(route.bearing)}°)</div></div>
           <div class="f-card"><div class="k">3-Waypoint Jet Component (${level})</div><div class="v" style="color:${isTail ? "var(--ok)" : "var(--warn)"};">${isTail ? "+" : ""}${Math.round(curFlight.windComp)} mph ${isTail ? "Tailwind" : "Headwind"}</div><div class="d">Mean route jet: ${Math.round(curFlight.avgSpd)} mph from ${curFlight.avgDir}°</div></div>
           <div class="f-card"><div class="k">Cruise Duration &amp; Delta</div><div class="v" style="color:${curFlight.diffMins <= 0 ? "var(--ok)" : "var(--warn)"};">${curFlight.diffMins <= 0 ? Math.abs(curFlight.diffMins) + " min Faster" : curFlight.diffMins + " min Slower"}</div><div class="d">Still-air: <strong>${fmtDur(curFlight.stillMins)}</strong> · With wind: <strong>${fmtDur(curFlight.actualMins)}</strong></div></div>
         `;
@@ -2024,7 +2060,7 @@
             <div class="hero-icon-wrap">${getAnimatedSvg(cur.wcode, cur.isNight, 56)}</div>
             <div>
               <div class="hero-temp">${Math.round(cur.wtd)}°F</div>
-              <div class="hero-cond">${weatherLabel(cur.wcode)} · Feels ${Math.round(cur.feelsLike)}°F</div>
+              <div class="hero-cond">${weatherLabel(cur.wcode)} · Feels ${Math.round(cur.feelsLike)}°F <a href="#listen-current" class="audio-link-btn" data-audio-desc="${encodeURIComponent(buildCurrentOverviewSpeech(loc, cur))}">🔊 Audio</a></div>
               <div class="hero-meta">${loc.name} (${loc.zip}) · ${Math.round(cur.cloudCover)}% Clouds</div>
             </div>
             <div>${getCompassSvg(cur.wdir, cur.wspd, 58)}</div>
@@ -2051,9 +2087,11 @@
         const stRows = rows.slice(0, 48), stMin = Math.min(...stRows.map(r => r.wtd)), stMax = Math.max(...stRows.map(r => r.wtd));
         const stMaxPop = Math.max(...stRows.map(r => r.pop ?? 0)), avgCloud = Math.round(stRows.reduce((a, r) => a + r.cloudCover, 0) / stRows.length);
 
+        const stBriefSpeech = `Short term 48 hour briefing for ${loc.name}, ZIP ${loc.zip}: temperatures from ${Math.round(stMin)} to ${Math.round(stMax)} degrees, average cloud cover ${avgCloud} percent, peak precipitation chance ${stMaxPop} percent. ${lag.detail}.`;
+        const borderBriefSpeech = `Border radar and sky briefing: US NEXRAD and Environment Canada 1 kilometer radar active with 10, 25, and 50 mile lightning rings. Peak Lake Huron delta T reaches ${Math.max(...rows.map(r => r.dtC ?? -99)).toFixed(1)} degrees Celsius. Sunrise ${todaySun.sunrise}, sunset ${todaySun.sunset}.`;
         document.getElementById("briefingsBox").innerHTML = `
-          <div class="brief-card"><span class="brief-badge">Local 48-Hr Briefing</span><p><strong>${loc.name} (${loc.zip})</strong>: <strong>${Math.round(stMin)}°F to ${Math.round(stMax)}°F</strong>, avg cloud cover <strong>${avgCloud}%</strong>, peak precip <strong>${stMaxPop}%</strong>.</p><div class="model-note"><strong>Road &amp; Deck Lag:</strong> ${lag.detail}.</div></div>
-          <div class="brief-card"><span class="brief-badge">Border Radar &amp; Sky</span><p>US NEXRAD + Environment Canada 1 km radar with 10/25/50 mi lightning rings. Peak Lake Huron ΔT <strong>${Math.max(...rows.map(r => r.dtC ?? -99)).toFixed(1)}°C</strong>.</p><div class="model-note"><strong>Sun &amp; Moon:</strong> Rise ${todaySun.sunrise} · Set ${todaySun.sunset} · Moon ${todayMoon.moonrise} / ${todayMoon.moonset}.</div></div>
+          <div class="brief-card"><span class="brief-badge">Local 48-Hr Briefing</span><p><strong>${loc.name} (${loc.zip})</strong>: <strong>${Math.round(stMin)}°F to ${Math.round(stMax)}°F</strong>, avg cloud cover <strong>${avgCloud}%</strong>, peak precip <strong>${stMaxPop}%</strong>. <a href="#listen-48hr" class="audio-link-btn" data-audio-desc="${encodeURIComponent(stBriefSpeech)}">🔊 Audio</a></p><div class="model-note"><strong>Road &amp; Deck Lag:</strong> ${lag.detail}.</div></div>
+          <div class="brief-card"><span class="brief-badge">Border Radar &amp; Sky</span><p>US NEXRAD + Environment Canada 1 km radar with 10/25/50 mi lightning rings. Peak Lake Huron ΔT <strong>${Math.max(...rows.map(r => r.dtC ?? -99)).toFixed(1)}°C</strong>. <a href="#listen-border" class="audio-link-btn" data-audio-desc="${encodeURIComponent(borderBriefSpeech)}">🔊 Audio</a></p><div class="model-note"><strong>Sun &amp; Moon:</strong> Rise ${todaySun.sunrise} · Set ${todaySun.sunset} · Moon ${todayMoon.moonrise} / ${todayMoon.moonset}.</div></div>
         `;
 
         const snap = rows[Math.min(24, rows.length - 1)];
@@ -2070,17 +2108,21 @@
           const sun = computeSunTimes(dayKey, loc.lat, loc.lon, -5), moon = computeMoonPhase(dayKey);
           const label = dIdx === 0 ? "Today" : dIdx === 1 ? "Tomorrow" : new Date(dayKey + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
           dIdx++;
-          return `<div class="day-card"><div class="day-name">${label}</div><div class="day-icon">${getAnimatedSvg(mid.wcode, false, 40)}</div><div class="day-temps">${hiT}° <span class="lo">/ ${loT}°</span></div><div class="day-desc">${weatherLabel(mid.wcode)} · ${Math.round(mid.cloudCover)}% clouds</div><div class="day-sun">☀ ${sun.sunrise} – ${sun.sunset}<br/>🌙 ${moon.moonrise} / ${moon.moonset}</div><div class="day-spread">Base ~${mid.cloudBaseFt ? (mid.cloudBaseFt/1000).toFixed(1) + "k ft" : "—"}</div></div>`;
+          const dayAudioSpeech = `${label} outlook for ${loc.name}: high of ${hiT} degrees, low of ${loT} degrees, ${weatherLabel(mid.wcode)}, ${Math.round(mid.cloudCover)} percent cloud cover.`;
+          return `<div class="day-card"><div class="day-name">${label}</div><div class="day-icon">${getAnimatedSvg(mid.wcode, false, 40)}</div><div class="day-temps">${hiT}° <span class="lo">/ ${loT}°</span></div><div class="day-desc">${weatherLabel(mid.wcode)} · ${Math.round(mid.cloudCover)}% clouds</div><div class="day-sun">☀ ${sun.sunrise} – ${sun.sunset}<br/>🌙 ${moon.moonrise} / ${moon.moonset}</div><div class="day-spread">Base ~${mid.cloudBaseFt ? (mid.cloudBaseFt/1000).toFixed(1) + "k ft" : "—"}</div><div class="day-audio-wrap"><a href="#listen-day" class="audio-link-btn" data-audio-desc="${encodeURIComponent(dayAudioSpeech)}">🔊 Audio</a></div></div>`;
         }).join("");
 
         document.getElementById("rowsBody").innerHTML = rows.filter((_, i) => i % 3 === 0).map(r => {
           const dbzTxt = r.simDbz > 0 ? `~${r.simDbz} dBZ` : "Clear", ltgRow = evaluateLightningRisk(r.cape, r.liftedIdx, r.wcode, r.simDbz);
           const lesTxt = r.lesRisk === "HIGH_LES" ? "High LES" : r.lesRisk === "MOD_LES" ? "Mod LES" : r.fetchActive ? `${r.fetchSector} Fetch` : "Quiet";
-          return `<tr><td>${r.ts.replace("T", " ").slice(5, 16)}</td><td>${getAnimatedSvg(r.wcode, r.isNight, 22)} ${weatherLabel(r.wcode)}</td><td><strong>${r.wtd.toFixed(1)}°F</strong></td><td>${Math.round(r.cloudCover)}%</td><td>${r.cloudBaseFt ? r.cloudBaseFt.toLocaleString() + " ft" : "—"}</td><td class="${ltgRow.cls}">${ltgRow.level} (${r.cape != null ? Math.round(r.cape) : 0})</td><td>${dbzTxt}</td><td>${r.pop != null ? r.pop + "%" : "—"}</td><td>${degToCardinal(r.wdir)} ${Math.round(r.wspd)} (G ${Math.round(r.wgst)})</td><td class="les-${r.lesRisk}">${lesTxt}</td></tr>`;
+          const rowTimeLabel = r.ts.replace("T", " ").slice(5, 16);
+          const rowSpeech = `At ${rowTimeLabel}: ${r.wtd.toFixed(1)} degrees, ${weatherLabel(r.wcode)}, ${Math.round(r.cloudCover)} percent clouds, wind ${degToCardinal(r.wdir)} ${Math.round(r.wspd)} miles per hour, gusts ${Math.round(r.wgst)}, precipitation chance ${r.pop ?? 0} percent.`;
+          return `<tr><td>${rowTimeLabel} <a href="#listen-row" class="audio-link-btn" data-audio-desc="${encodeURIComponent(rowSpeech)}" title="Listen to this forecast hour">🔊</a></td><td>${getAnimatedSvg(r.wcode, r.isNight, 22)} ${weatherLabel(r.wcode)}</td><td><strong>${r.wtd.toFixed(1)}°F</strong></td><td>${Math.round(r.cloudCover)}%</td><td>${r.cloudBaseFt ? r.cloudBaseFt.toLocaleString() + " ft" : "—"}</td><td class="${ltgRow.cls}">${ltgRow.level} (${r.cape != null ? Math.round(r.cape) : 0})</td><td>${dbzTxt}</td><td>${r.pop != null ? r.pop + "%" : "—"}</td><td>${degToCardinal(r.wdir)} ${Math.round(r.wspd)} (G ${Math.round(r.wgst)})</td><td class="les-${r.lesRisk}">${lesTxt}</td></tr>`;
         }).join("");
 
         const updatedAt = new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
         statusText.textContent = `Updated ${updatedAt} · ${loc.name} (${loc.zip}) · ${Object.keys(cur.temps).length} Active Models`;
+        speakForecastText(buildCurrentOverviewSpeech(loc, cur), false);
       } catch (err) {
         updateCacheBadge(true);
         statusBar.className = "status-bar error";
@@ -2127,12 +2169,81 @@
       box.innerHTML = notes.length ? notes.map(n => `<div class="cwop-card"><span class="st-dist">${n.cat}</span><div class="st-id">${n.subj || "Note"}</div><div style="margin:4px 0;">${n.details}</div><div style="color:var(--muted);font-size:0.73rem;">${n.savedAt} · ${n.meta}</div></div>`).join("") : `<div class="cwop-card">No saved local notes yet.</div>`;
     }
 
-    // ==================== VOICE & EXPORTS ====================
-    document.getElementById("voiceBtn").addEventListener("click", () => {
-      if (!("speechSynthesis" in window) || !latestRows.length) return;
-      window.speechSynthesis.cancel(); const cur = latestRows[0], ltg = evaluateLightningRisk(cur.cape, cur.liftedIdx, cur.wcode, cur.simDbz);
-      window.speechSynthesis.speak(new SpeechSynthesisUtterance(`Local briefing for ${currentLoc.name}, ZIP ${currentLoc.zip}: ${Math.round(cur.wtd)} degrees and ${weatherLabel(cur.wcode)}. Wind ${degToCardinal(cur.wdir)} ${Math.round(cur.wspd)} mph, gusts ${Math.round(cur.wgst)}. Cloud cover ${Math.round(cur.cloudCover)} percent. Lightning risk: ${ltg.level}.`));
+    // ==================== AUTO VOICE-OVER & PER-FORECAST AUDIO LINKS ====================
+    let autoVoiceEnabled = localStorage.getItem("bw_auto_voice") !== "off";
+
+    function syncAutoVoiceButton() {
+      const btn = document.getElementById("autoVoiceToggleBtn");
+      if (!btn) return;
+      btn.textContent = autoVoiceEnabled ? "Auto Voice: ON" : "Auto Voice: OFF";
+      btn.style.borderColor = autoVoiceEnabled ? "var(--accent)" : "var(--border)";
+      btn.style.color = autoVoiceEnabled ? "#7dd3fc" : "var(--muted)";
+    }
+
+    let activeAudioBtn = null;
+
+    function clearSpeakingState() {
+      document.querySelectorAll(".audio-link-btn.speaking").forEach(el => {
+        el.classList.remove("speaking");
+        if (el.dataset.origLabel) el.textContent = el.dataset.origLabel;
+      });
+      activeAudioBtn = null;
+    }
+
+    function speakForecastText(text, force = false, triggerBtn = null) {
+      if (!("speechSynthesis" in window) || !text) return;
+      if (!force && !autoVoiceEnabled) return;
+      try {
+        const wasSameBtn = triggerBtn && activeAudioBtn === triggerBtn && window.speechSynthesis.speaking;
+        window.speechSynthesis.cancel();
+        clearSpeakingState();
+        if (wasSameBtn) return;
+
+        const utter = new SpeechSynthesisUtterance(text);
+        utter.rate = 1.0;
+        utter.pitch = 1.0;
+        if (triggerBtn) {
+          if (!triggerBtn.dataset.origLabel) triggerBtn.dataset.origLabel = triggerBtn.textContent;
+          triggerBtn.classList.add("speaking");
+          triggerBtn.textContent = "⏹ Stop";
+          activeAudioBtn = triggerBtn;
+        }
+        utter.onend = clearSpeakingState;
+        utter.onerror = clearSpeakingState;
+        window.speechSynthesis.speak(utter);
+      } catch (e) {}
+    }
+
+    // Universal delegated handler for all inline audio description links across every tab
+    document.addEventListener("click", e => {
+      const linkBtn = e.target.closest("[data-audio-desc]");
+      if (!linkBtn) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const spoken = decodeURIComponent(linkBtn.getAttribute("data-audio-desc") || "");
+      speakForecastText(spoken, true, linkBtn);
     });
+
+    document.getElementById("autoVoiceToggleBtn").addEventListener("click", () => {
+      autoVoiceEnabled = !autoVoiceEnabled;
+      localStorage.setItem("bw_auto_voice", autoVoiceEnabled ? "on" : "off");
+      syncAutoVoiceButton();
+      if (!autoVoiceEnabled && "speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+      } else if (autoVoiceEnabled && latestRows.length) {
+        speakForecastText(buildCurrentOverviewSpeech(currentLoc, latestRows[0]), true);
+      }
+    });
+
+    document.getElementById("stopVoiceBtn").addEventListener("click", () => {
+      if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+      clearSpeakingState();
+    });
+
+    function buildCurrentOverviewSpeech(loc, cur) {
+      const ltg = evaluateLightningRisk(cur.cape, cur.liftedIdx, cur.wcode, cur.simDbz);
+      return `Forecast for ${loc.name}, ZIP ${loc.zip}: currently ${Math.round(cur.wtd)} degrees and ${weatherLabel(cur.wcode)}, feels like ${Math.round(cur.feelsLike)}. Wind ${degToCardinal(cur.wdir)} at ${Math.round(cur.wspd)} miles per hour, gusts ${Math.round(cur.wgst)}. Cloud cover ${Math.round(cur.cloudCover)} percent, cloud base around ${cur.cloudBaseFt || 3000} feet. Lightning status: ${ltg.level}.`;
+    }
 
     function triggerDownload(filename, content, mime) {
       const blob = new Blob([content], { type: mime }), url = URL.createObjectURL(blob), a = document.createElement("a");
@@ -2180,6 +2291,7 @@
     now.setMinutes(0, 0, 0);
     document.getElementById("flightDate").value = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 
+    syncAutoVoiceButton();
     renderFavZips();
     populateAirportDropdowns();
     renderSavedSupportNotes();

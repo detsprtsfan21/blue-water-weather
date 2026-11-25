@@ -583,19 +583,20 @@
         </table>
       </div>
 
-      <h2>40-Year Historical Temperature Analogs (&plusmn;20&deg;F from Yesterday) &amp; All-Time Records</h2>
-      <div class="status-bar" id="histStatus">Loading 40-year archive (1986–present) for active ZIP...</div>
+      <h2>Yesterday in Weather History &amp; 40-Year Same-Date Fun Facts</h2>
+      <div class="status-bar" id="histStatus">Checking 40 years of records for yesterday's calendar date...</div>
+      <div class="brief-card" id="histFunFactBox" style="margin-bottom:14px; border-color:var(--border-strong);"></div>
       <section class="hist-records" id="histRecordsBox"></section>
       <div class="table-wrap">
         <table>
           <thead>
             <tr>
-              <th>Historical Date</th>
+              <th>Same Date (Year)</th>
               <th>Years Ago</th>
               <th>High Temp</th>
               <th>Low Temp</th>
-              <th>Mean Temp</th>
-              <th>Delta vs. Yesterday</th>
+              <th>High Swing vs. Yesterday</th>
+              <th>Low Swing vs. Yesterday</th>
               <th>Precipitation</th>
               <th>Snowfall</th>
             </tr>
@@ -1780,20 +1781,23 @@
       }
     });
 
-    // ==================== 40-YEAR HISTORICAL ANALOGS (+/- 20F) & ALL-TIME RECORDS ====================
+    // ==================== YESTERDAY IN WEATHER HISTORY (SAME CALENDAR DATE ACROSS 40 YEARS) ====================
     async function loadHistorical40YrAnalogs(loc) {
       const hStatus = document.getElementById("histStatus");
+      const funBox = document.getElementById("histFunFactBox");
       const recBox = document.getElementById("histRecordsBox");
       const tbody = document.getElementById("histRowsBody");
 
       hStatus.className = "status-bar";
-      hStatus.textContent = `Querying 40-year daily archive (1986–present) for ${loc.name} (${loc.zip})...`;
+      hStatus.textContent = `Checking 40 years of history (1986–present) for yesterday's calendar date in ${loc.name} (${loc.zip})...`;
 
       try {
         const nowDet = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Detroit" }));
         const yest = new Date(nowDet);
         yest.setDate(yest.getDate() - 1);
         const endDate = yest.toISOString().slice(0, 10);
+        const targetMonthDay = endDate.slice(5, 10); // e.g., "11-24"
+        const prettyMonthDay = yest.toLocaleDateString("en-US", { month: "long", day: "numeric" });
 
         const start = new Date(yest);
         start.setFullYear(start.getFullYear() - 40);
@@ -1807,7 +1811,6 @@
         const dates = d.time || [];
         const highs = d.temperature_2m_max || [];
         const lows = d.temperature_2m_min || [];
-        const means = d.temperature_2m_mean || [];
         const precips = d.precipitation_sum || [];
         const snows = d.snowfall_sum || [];
 
@@ -1817,84 +1820,113 @@
         const yDate = dates[yIdx];
         const yHigh = highs[yIdx];
         const yLow = lows[yIdx];
-        const yMean = means[yIdx] != null ? means[yIdx] : ((yHigh + yLow) / 2);
-
-        let recHigh = -999, recHighDate = "";
-        let recLow = 999, recLowDate = "";
-        const matches = [];
         const yestYear = parseInt(yDate.slice(0, 4), 10);
 
+        // Filter to the EXACT SAME calendar month-day (MM-DD) across all 40 years
+        let sameDateRecHigh = -999, sameDateRecHighYear = "";
+        let sameDateRecLow = 999, sameDateRecLowYear = "";
+        const sameDateRows = [];
+
         for (let i = 0; i < dates.length; i++) {
+          if (dates[i].slice(5, 10) !== targetMonthDay) continue;
           const hi = highs[i];
           const lo = lows[i];
-          const mn = means[i] != null ? means[i] : (hi != null && lo != null ? (hi + lo) / 2 : null);
+          const yr = dates[i].slice(0, 4);
 
-          if (hi != null && hi > recHigh) { recHigh = hi; recHighDate = dates[i]; }
-          if (lo != null && lo < recLow) { recLow = lo; recLowDate = dates[i]; }
+          if (hi != null && hi > sameDateRecHigh) { sameDateRecHigh = hi; sameDateRecHighYear = yr; }
+          if (lo != null && lo < sameDateRecLow) { sameDateRecLow = lo; sameDateRecLowYear = yr; }
 
-          if (i < yIdx && mn != null && yMean != null) {
-            const diff = mn - yMean;
-            if (Math.abs(diff) >= 20) {
-              const yr = parseInt(dates[i].slice(0, 4), 10);
-              matches.push({
-                date: dates[i],
-                yearsAgo: yestYear - yr,
-                hi, lo, mn, diff,
-                precip: precips[i] ?? 0,
-                snow: snows[i] ?? 0
-              });
-            }
+          if (i < yIdx) {
+            const hiDiff = (hi != null && yHigh != null) ? (hi - yHigh) : 0;
+            const loDiff = (lo != null && yLow != null) ? (lo - yLow) : 0;
+            sameDateRows.push({
+              date: dates[i],
+              year: yr,
+              yearsAgo: yestYear - parseInt(yr, 10),
+              hi, lo, hiDiff, loDiff,
+              maxAbsSwing: Math.max(Math.abs(hiDiff), Math.abs(loDiff)),
+              precip: precips[i] ?? 0,
+              snow: snows[i] ?? 0
+            });
           }
         }
 
+        // Big swings (+/- 20F or more on either the High or Low compared to yesterday)
+        const bigSwings = sameDateRows.filter(r => Math.abs(r.hiDiff) >= 20 || Math.abs(r.loDiff) >= 20);
+        const biggestSwing = [...sameDateRows].sort((a, b) => b.maxAbsSwing - a.maxAbsSwing)[0];
+
+        // Build plain-English Fun Fact callout
+        let funFactText = `Yesterday (${prettyMonthDay}, ${yestYear}) in <strong>${loc.name}</strong> hit an actual high of <strong>${yHigh.toFixed(1)}°F</strong> and a low of <strong>${yLow.toFixed(1)}°F</strong>. `;
+        funFactText += `Over the last 40 years on <strong>${prettyMonthDay}</strong>, the record high was <strong>${sameDateRecHigh.toFixed(1)}°F</strong> (in <strong>${sameDateRecHighYear}</strong>) and the record low was <strong>${sameDateRecLow.toFixed(1)}°F</strong> (in <strong>${sameDateRecLowYear}</strong>). `;
+
+        if (bigSwings.length > 0) {
+          const highlights = bigSwings.slice(-3).reverse().map(s => {
+            const useHi = Math.abs(s.hiDiff) >= Math.abs(s.loDiff);
+            const delta = useHi ? s.hiDiff : s.loDiff;
+            const kind = useHi ? `high of ${s.hi.toFixed(0)}°F` : `low of ${s.lo.toFixed(0)}°F`;
+            return `<strong>${s.year}</strong> (${kind}, ${delta > 0 ? "+" : ""}${delta.toFixed(0)}°F ${delta > 0 ? "warmer" : "colder"})`;
+          });
+          funFactText += `There were <strong>${bigSwings.length} year(s)</strong> on ${prettyMonthDay} that swung by <strong>20°F or more</strong> from yesterday—including ${highlights.join(", ")}!`;
+        } else if (biggestSwing) {
+          const useHi = Math.abs(biggestSwing.hiDiff) >= Math.abs(biggestSwing.loDiff);
+          const delta = useHi ? biggestSwing.hiDiff : biggestSwing.loDiff;
+          funFactText += `No ${prettyMonthDay} in the past 40 years differed by a full 20°F—the biggest difference on this date was in <strong>${biggestSwing.year}</strong> (${delta > 0 ? "+" : ""}${delta.toFixed(1)}°F on the ${useHi ? "high" : "low"}).`;
+        }
+
+        funBox.innerHTML = `
+          <span class="brief-badge">Weather History Fun Fact · ${prettyMonthDay}</span>
+          <p style="margin:0;">${funFactText}</p>
+        `;
+
         recBox.innerHTML = `
           <div class="rec-card">
-            <div class="k">Yesterday's Baseline (${yDate})</div>
-            <div class="v">${Math.round(yHigh)}° / ${Math.round(yLow)}°F</div>
-            <div class="d">Daily mean: <strong>${yMean.toFixed(1)}°F</strong> (Reference for &plusmn;20°F swing search)</div>
+            <div class="k">Yesterday's Actuals (${yDate})</div>
+            <div class="v">${yHigh.toFixed(1)}° / ${yLow.toFixed(1)}°F</div>
+            <div class="d">Actual High / Low on ${prettyMonthDay}, ${yestYear}</div>
           </div>
           <div class="rec-card">
-            <div class="k">40-Year Record High (${loc.zip})</div>
-            <div class="v" style="color:var(--warn);">${recHigh.toFixed(1)}°F</div>
-            <div class="d">Recorded on <strong>${recHighDate}</strong></div>
+            <div class="k">${prettyMonthDay} Record High (40 Yrs)</div>
+            <div class="v" style="color:var(--warn);">${sameDateRecHigh.toFixed(1)}°F</div>
+            <div class="d">Set on ${prettyMonthDay}, <strong>${sameDateRecHighYear}</strong></div>
           </div>
           <div class="rec-card">
-            <div class="k">40-Year Record Low (${loc.zip})</div>
-            <div class="v" style="color:var(--accent);">${recLow.toFixed(1)}°F</div>
-            <div class="d">Recorded on <strong>${recLowDate}</strong></div>
+            <div class="k">${prettyMonthDay} Record Low (40 Yrs)</div>
+            <div class="v" style="color:var(--accent);">${sameDateRecLow.toFixed(1)}°F</div>
+            <div class="d">Set on ${prettyMonthDay}, <strong>${sameDateRecLowYear}</strong></div>
           </div>
           <div class="rec-card">
-            <div class="k">&plusmn;20°F Swing Days Found</div>
-            <div class="v">${matches.length.toLocaleString()} Days</div>
-            <div class="d">Dates in last 40 yrs &ge;20°F warmer or colder than yesterday</div>
+            <div class="k">Same-Date &plusmn;20°F Swings</div>
+            <div class="v">${bigSwings.length} Year${bigSwings.length === 1 ? "" : "s"}</div>
+            <div class="d">Past ${prettyMonthDay}s &ge;20°F warmer or colder than yesterday</div>
           </div>
         `;
 
-        matches.sort((a, b) => b.date.localeCompare(a.date));
-        const shown = matches.slice(0, 150);
+        // Show big +/-20F years first (highlighted), followed by the rest of the 40 same-date years
+        const orderedRows = [
+          ...bigSwings.sort((a, b) => b.year.localeCompare(a.year)),
+          ...sameDateRows.filter(r => !bigSwings.includes(r)).sort((a, b) => b.year.localeCompare(a.year))
+        ];
 
-        if (!shown.length) {
-          tbody.innerHTML = `<tr><td colspan="8">No days in the 40-year archive differed by &ge;20°F from yesterday's ${yMean.toFixed(1)}°F mean.</td></tr>`;
-        } else {
-          tbody.innerHTML = shown.map(m => {
-            const isWarmer = m.diff > 0;
-            return `<tr>
-              <td><strong>${m.date}</strong></td>
-              <td>${m.yearsAgo} yr${m.yearsAgo === 1 ? "" : "s"} ago</td>
-              <td>${m.hi != null ? m.hi.toFixed(1) + "°F" : "—"}</td>
-              <td>${m.lo != null ? m.lo.toFixed(1) + "°F" : "—"}</td>
-              <td><strong>${m.mn.toFixed(1)}°F</strong></td>
-              <td class="${isWarmer ? "tag-warm" : "tag-cold"}">${isWarmer ? "+" : ""}${m.diff.toFixed(1)}°F (${isWarmer ? "Warmer" : "Colder"})</td>
-              <td>${m.precip.toFixed(2)}"</td>
-              <td>${m.snow.toFixed(1)}"</td>
-            </tr>`;
-          }).join("");
-        }
+        tbody.innerHTML = orderedRows.map(m => {
+          const isBig = Math.abs(m.hiDiff) >= 20 || Math.abs(m.loDiff) >= 20;
+          const hiCls = m.hiDiff >= 20 ? "tag-warm" : m.hiDiff <= -20 ? "tag-cold" : "";
+          const loCls = m.loDiff >= 20 ? "tag-warm" : m.loDiff <= -20 ? "tag-cold" : "";
+          return `<tr style="${isBig ? "background:rgba(56,189,248,0.08);" : ""}">
+            <td><strong>${m.date}</strong>${isBig ? " ★" : ""}</td>
+            <td>${m.yearsAgo} yr${m.yearsAgo === 1 ? "" : "s"} ago</td>
+            <td><strong>${m.hi != null ? m.hi.toFixed(1) + "°F" : "—"}</strong></td>
+            <td><strong>${m.lo != null ? m.lo.toFixed(1) + "°F" : "—"}</strong></td>
+            <td class="${hiCls}">${m.hiDiff > 0 ? "+" : ""}${m.hiDiff.toFixed(1)}°F</td>
+            <td class="${loCls}">${m.loDiff > 0 ? "+" : ""}${m.loDiff.toFixed(1)}°F</td>
+            <td>${m.precip.toFixed(2)}"</td>
+            <td>${m.snow.toFixed(1)}"</td>
+          </tr>`;
+        }).join("");
 
-        hStatus.textContent = `40-Year Archive (${startDate} to ${endDate}): Found ${matches.length.toLocaleString()} dates with >= 20°F swing vs. yesterday (${yMean.toFixed(1)}°F). Showing ${shown.length} most recent.`;
+        hStatus.textContent = `Compared yesterday (${prettyMonthDay}, ${yestYear}: ${yHigh.toFixed(1)}° / ${yLow.toFixed(1)}°F) against every ${prettyMonthDay} over the past 40 years (${bigSwings.length} year(s) with >= 20°F swing starred ★).`;
       } catch (err) {
         hStatus.className = "status-bar error";
-        hStatus.textContent = "Historical 40-year archive notice: " + err.message;
+        hStatus.textContent = "Historical archive notice: " + err.message;
       }
     }
 

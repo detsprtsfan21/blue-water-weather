@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <link rel="manifest" href="manifest.json" />
-  <title>Blue Water &amp; North America Weather, Marine, Commute &amp; Jet Command</title>
+  <title>Blue Water &amp; North America Weather, Radar, Lightning, Marine &amp; Jet Command</title>
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
 
@@ -39,7 +39,7 @@
       padding: 14px;
       line-height: 1.5;
     }
-    .wrap { max-width: 1220px; margin: 0 auto; }
+    .wrap { max-width: 1240px; margin: 0 auto; }
 
     header {
       display: flex; flex-wrap: wrap; justify-content: space-between;
@@ -73,7 +73,7 @@
     .view-section { display: none; }
     .view-section.active { display: block; }
 
-    /* Alerts Banner */
+    /* Alerts & Lightning Proximity Banner */
     .alert-box {
       display: none;
       background: rgba(244, 63, 94, 0.14);
@@ -95,7 +95,6 @@
     .alert-badge.watch { background: rgba(245, 158, 11, 0.28); color: #fde68a; }
     .alert-badge.statement { background: rgba(56, 189, 248, 0.25); color: #bae6fd; }
 
-    /* Controls */
     .controls {
       display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
       background: var(--panel); backdrop-filter: blur(12px);
@@ -110,18 +109,17 @@
     }
     input, select, button {
       background: #172434; color: var(--text); border: 1px solid var(--border);
-      padding: 8px 11px; border-radius: 9px; font-size: 0.9rem;
+      padding: 8px 11px; border-radius: 9px; font-size: 0.88rem;
     }
     input:focus, select:focus { outline: none; border-color: var(--accent); }
-    input[type="text"].zip-in { width: 112px; font-weight: 700; letter-spacing: 1px; }
+    input[type="text"].zip-in { width: 108px; font-weight: 700; letter-spacing: 1px; }
     button.primary {
       background: linear-gradient(135deg, #0284c7, #2563eb);
-      border-color: transparent; font-weight: 700; cursor: pointer; padding: 9px 15px;
+      border-color: transparent; font-weight: 700; cursor: pointer; padding: 9px 14px;
     }
-    button.secondary { cursor: pointer; padding: 9px 13px; background: #1a293b; }
+    button.secondary { cursor: pointer; padding: 9px 12px; background: #1a293b; }
 
-    /* Pinned ZIPs */
-    .fav-zips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 12px; }
+    .fav-zips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 10px; }
     .fav-chip {
       font-size: 0.76rem; padding: 4px 10px; border-radius: 999px; cursor: pointer;
       background: var(--panel-soft); border: 1px solid var(--border); color: var(--text);
@@ -134,11 +132,18 @@
       font-size: 0.84rem; color: var(--muted); margin-bottom: 14px;
       padding: 8px 12px; border-radius: 8px; background: rgba(255,255,255,0.03);
       border: 1px solid rgba(255,255,255,0.06);
+      display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px;
     }
     .status-bar.error {
       color: #fecdd3; background: rgba(244, 63, 94, 0.16);
       border: 1px solid rgba(244, 63, 94, 0.4); font-weight: 600;
     }
+    .cache-pill {
+      font-size: 0.72rem; font-weight: 800; text-transform: uppercase;
+      padding: 2px 8px; border-radius: 999px;
+      background: rgba(16, 185, 129, 0.16); color: var(--ok);
+    }
+    .cache-pill.offline { background: rgba(245, 158, 11, 0.22); color: var(--warn); }
 
     /* Animated Weather Icons */
     .wx-svg { display: inline-block; vertical-align: middle; overflow: visible; }
@@ -168,7 +173,7 @@
       box-shadow: 0 14px 36px rgba(0, 0, 0, 0.4);
     }
     @media (min-width: 860px) {
-      .hero { grid-template-columns: 1fr 1.55fr; align-items: center; }
+      .hero { grid-template-columns: 1fr 1.65fr; align-items: center; }
     }
     .hero-main { display: flex; align-items: center; gap: 16px; }
     .hero-icon-wrap {
@@ -180,21 +185,43 @@
     .hero-cond { font-size: 1.02rem; color: var(--accent); font-weight: 700; margin-top: 3px; }
     .hero-meta { font-size: 0.84rem; color: var(--muted); margin-top: 4px; }
     .hero-pills { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
-    @media (min-width: 620px) {
+    @media (min-width: 640px) {
       .hero-pills { grid-template-columns: repeat(4, 1fr); }
     }
     .pill {
       background: var(--panel-soft); border: 1px solid var(--border);
       border-radius: 11px; padding: 8px 10px;
     }
-    .pill span { display: block; color: var(--muted); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.04em; }
-    .pill strong { display: block; font-size: 0.92rem; color: var(--text); margin-top: 2px; }
-    .pill small { display: block; font-size: 0.71rem; color: var(--muted); margin-top: 2px; }
+    .pill span { display: block; color: var(--muted); font-size: 0.67rem; text-transform: uppercase; letter-spacing: 0.04em; }
+    .pill strong { display: block; font-size: 0.91rem; color: var(--text); margin-top: 2px; }
+    .pill small { display: block; font-size: 0.7rem; color: var(--muted); margin-top: 2px; }
     .badge-vfr { color: var(--ok); font-weight: 800; }
     .badge-mvfr { color: var(--warn); font-weight: 800; }
     .badge-ifr { color: var(--alert); font-weight: 800; }
 
-    /* Commute Corridor & Pavement/Bridge Lag Panel */
+    /* Interactive Timeline Scrubber Bar */
+    .timeline-scrubber-card {
+      background: var(--panel); border: 1px solid var(--border-strong);
+      border-radius: 14px; padding: 12px 15px; margin-bottom: 16px;
+    }
+    .timeline-row {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 12px;
+    }
+    .timeline-row input[type="range"] {
+      flex: 1; min-width: 180px; padding: 0; accent-color: var(--accent);
+    }
+    .timeline-readout {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+      gap: 8px; margin-top: 10px; font-size: 0.82rem;
+    }
+    .t-chip {
+      background: var(--panel-soft); border: 1px solid var(--border);
+      border-radius: 9px; padding: 6px 10px;
+    }
+    .t-chip span { color: var(--muted); font-size: 0.7rem; display: block; text-transform: uppercase; }
+    .t-chip strong { color: #ffffff; font-size: 0.92rem; }
+
+    /* Commute Corridor & Pavement/Bridge Deck Lag */
     .commute-panel {
       background: var(--panel); border: 1px solid var(--border-strong);
       border-radius: 14px; padding: 14px; margin-bottom: 16px;
@@ -202,9 +229,7 @@
     .commute-header {
       display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px;
     }
-    .commute-inputs {
-      display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
-    }
+    .commute-inputs { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
     .commute-inputs input { width: 105px; font-weight: 700; padding: 6px 10px; font-size: 0.85rem; }
     .commute-inputs button { padding: 6px 12px; font-size: 0.85rem; }
     .commute-grid {
@@ -222,19 +247,6 @@
     .risk-mod { color: var(--warn); font-weight: 800; }
     .risk-low { color: var(--ok); font-weight: 800; }
 
-    /* Marine, Lake Huron Water Temp, Ice Coverage & River NOAA Gauges */
-    .marine-grid {
-      display: grid; grid-template-columns: repeat(auto-fit, minmax(235px, 1fr));
-      gap: 12px; margin-bottom: 14px;
-    }
-    .m-card {
-      background: var(--panel); border: 1px solid var(--border-strong);
-      border-radius: 14px; padding: 13px 14px;
-    }
-    .m-card .k { font-size: 0.72rem; text-transform: uppercase; color: var(--accent); font-weight: 700; }
-    .m-card .v { font-size: 1.32rem; font-weight: 800; margin: 4px 0; }
-    .m-card .d { font-size: 0.8rem; color: var(--muted); }
-
     /* Local CWOP Stations */
     .cwop-panel {
       background: var(--panel); border: 1px solid var(--border);
@@ -249,7 +261,7 @@
       border-radius: 10px; padding: 10px 12px; font-size: 0.83rem;
     }
     .cwop-card .st-id { font-weight: 800; color: var(--accent); font-size: 0.9rem; }
-    .cwop-card .st-dist { float: right; font-size: 0.75rem; color: var(--muted); }
+    .cwop-card .st-dist { float: right; font-size: 0.75rem; color: var(--ok); font-weight: 700; }
     .obs-tag {
       display: inline-block; font-size: 0.7rem; font-weight: 800; text-transform: uppercase;
       padding: 3px 8px; border-radius: 999px; background: rgba(16, 185, 129, 0.16); color: var(--ok);
@@ -279,7 +291,7 @@
       font-size: 0.78rem; color: var(--accent); font-weight: 700; min-height: 18px; margin-top: 4px;
     }
 
-    /* Cross-Border Radar */
+    /* Cross-Border Radar + Lightning & Plume Overlay */
     .radar-card {
       background: var(--panel); border: 1px solid var(--border-strong);
       border-radius: 14px; padding: 14px; margin-bottom: 18px;
@@ -290,14 +302,14 @@
     }
     .radar-btns { display: flex; flex-wrap: wrap; gap: 6px; }
     .r-btn {
-      font-size: 0.8rem; padding: 6px 11px; border-radius: 8px; cursor: pointer;
+      font-size: 0.78rem; padding: 6px 10px; border-radius: 8px; cursor: pointer;
       background: #172434; border: 1px solid var(--border); color: var(--muted); font-weight: 600;
     }
     .r-btn.active {
       background: rgba(56, 189, 248, 0.2); border-color: var(--accent); color: #ffffff;
     }
     #radarMap {
-      height: 360px; width: 100%; border-radius: 12px;
+      height: 390px; width: 100%; border-radius: 12px;
       border: 1px solid var(--border); background: #0c1622; z-index: 1;
     }
     .dark-osm-tiles {
@@ -312,6 +324,27 @@
     .radar-caption {
       font-size: 0.78rem; color: var(--muted); margin-top: 8px;
       display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px;
+    }
+
+    /* Marine & River */
+    .marine-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(235px, 1fr));
+      gap: 12px; margin-bottom: 14px;
+    }
+    .m-card {
+      background: var(--panel); border: 1px solid var(--border-strong);
+      border-radius: 14px; padding: 13px 14px;
+    }
+    .m-card .k { font-size: 0.72rem; text-transform: uppercase; color: var(--accent); font-weight: 700; }
+    .m-card .v { font-size: 1.32rem; font-weight: 800; margin: 4px 0; }
+    .m-card .d { font-size: 0.8rem; color: var(--muted); }
+    .rose-card {
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 14px; padding: 14px; margin-bottom: 16px;
+    }
+    #marineRoseCanvas {
+      width: 100%; height: 150px; display: block;
+      background: #08101a; border-radius: 10px; margin-top: 8px;
     }
 
     /* Briefings & Model Bars */
@@ -336,7 +369,6 @@
     .m-fill.consensus { background: linear-gradient(90deg, #10b981, #34d399); }
     .m-val { text-align: right; font-weight: 700; }
 
-    /* Daily Strip */
     .daily-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 18px; }
     .day-card { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 12px 10px; text-align: center; }
     .day-name { font-weight: 700; font-size: 0.92rem; }
@@ -347,7 +379,6 @@
     .day-sun { font-size: 0.72rem; color: var(--accent); margin-top: 5px; }
     .day-spread { margin-top: 5px; font-size: 0.71rem; padding: 2px 8px; border-radius: 999px; display: inline-block; background: var(--panel-soft); color: var(--muted); }
 
-    /* Tables */
     .table-wrap { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; overflow-x: auto; margin-bottom: 18px; }
     table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
     th, td { padding: 9px 10px; border-bottom: 1px solid var(--border); text-align: left; white-space: nowrap; }
@@ -356,7 +387,6 @@
     .les-MOD_LES { color: var(--warn); font-weight: 700; }
     .les-NONE, .les-NEUTRAL { color: var(--muted); }
 
-    /* Historical 40-Year Extremes */
     .hist-records {
       display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
       gap: 12px; margin-bottom: 14px;
@@ -368,10 +398,7 @@
     .rec-card .k { font-size: 0.72rem; text-transform: uppercase; color: var(--accent); font-weight: 700; }
     .rec-card .v { font-size: 1.38rem; font-weight: 800; margin: 4px 0; }
     .rec-card .d { font-size: 0.8rem; color: var(--muted); }
-    .tag-warm { color: var(--warn); font-weight: 700; }
-    .tag-cold { color: var(--accent); font-weight: 700; }
 
-    /* Sky, Astronomy & Holidays */
     .sky-grid {
       display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
       gap: 12px; margin-bottom: 18px;
@@ -426,18 +453,18 @@
   <div class="wrap">
     <header>
       <div>
-        <h1>Blue Water &amp; North America Weather, Marine, Commute &amp; Jet Command</h1>
-        <div class="sub">ZIP-localized ensemble, commute corridor &amp; bridge-lag alerts, Lake Huron / St. Clair River marine &amp; gauges, CWOP, radar, 40-yr records &amp; North America flights</div>
+        <h1>Blue Water &amp; North America Weather, Radar, Lightning, Marine &amp; Jet Command</h1>
+        <div class="sub">ZIP-localized ensemble, lightning proximity &amp; CAPE alerts, interactive CWOP map pins, plume vector cone, marine/river gauges, records &amp; flights</div>
       </div>
       <nav class="nav-tabs" aria-label="App Views">
-        <button class="nav-tab active" data-tab="localView">Local, Commute &amp; Radar</button>
+        <button class="nav-tab active" data-tab="localView">Local, Radar &amp; Lightning</button>
         <button class="nav-tab" data-tab="marineView">Lake Huron &amp; River NOAA</button>
         <button class="nav-tab" data-tab="skyView">Sky, Astronomy &amp; Holidays</button>
         <button class="nav-tab" data-tab="flightView">North America Jet &amp; Flights</button>
       </nav>
     </header>
 
-    <!-- ==================== VIEW 1: LOCAL WEATHER, COMMUTE CORRIDOR, GRAPHS, RADAR & 40-YR ANALOGS ==================== -->
+    <!-- ==================== VIEW 1 ==================== -->
     <main id="localView" class="view-section active">
       <div id="alertBox" class="alert-box"></div>
 
@@ -451,9 +478,10 @@
           <option value="48060">Port Huron, MI</option>
           <option value="48059">Fort Gratiot, MI</option>
           <option value="48079">St. Clair, MI</option>
-          <option value="48341">Pontiac, MI</option>
-          <option value="48371">Oxford, MI</option>
+          <option value="48032">Jeddo, MI</option>
+          <option value="48097">Yale, MI</option>
           <option value="48065">Romeo, MI</option>
+          <option value="48371">Oxford, MI</option>
           <option value="60601">Chicago Loop, IL</option>
           <option value="48201">Detroit, MI</option>
           <option value="73069">Norman, OK</option>
@@ -469,52 +497,68 @@
         </div>
 
         <button class="primary" id="goBtn">Update All</button>
-        <button class="secondary" id="saveZipBtn" title="Pin current ZIP code for 1-tap switching">+ Pin ZIP</button>
+        <button class="secondary" id="saveZipBtn" title="Pin current ZIP code">+ Pin ZIP</button>
+        <button class="secondary" id="voiceBtn" title="Read aloud concise weather & lightning briefing">Voice Briefing</button>
+        <button class="secondary" id="exportCsvBtn" title="Download hourly forecast as CSV">Export CSV</button>
+        <button class="secondary" id="exportJsonBtn" title="Download raw forecast snapshot as JSON">Export JSON</button>
         <button class="secondary" id="shareBtn">Share / Install</button>
       </div>
       <div class="fav-zips" id="favZipsBar"></div>
 
-      <div class="status-bar" id="statusBar">Initializing ZIP forecast, commute corridor, CWOP stations, wind/cloud graphs &amp; border radar...</div>
+      <div class="status-bar" id="statusBar">
+        <span id="statusText">Initializing ZIP forecast, lightning detector, CWOP map pins &amp; border radar...</span>
+        <span class="cache-pill" id="cacheStateBadge">Live Network</span>
+      </div>
 
       <section class="hero" id="heroBox"></section>
 
-      <!-- Commute Route Corridor Comparison & Pavement/Bridge Deck Lag -->
+      <!-- Interactive Hour-by-Hour Timeline Scrubber -->
+      <section class="timeline-scrubber-card">
+        <div class="timeline-row">
+          <strong style="font-size:0.9rem; color:var(--accent);">Interactive Forecast Time Machine:</strong>
+          <input type="range" id="timeScrubber" min="0" max="47" value="0" />
+          <span id="timeScrubberLabel" style="font-weight:800; font-size:0.88rem; min-width:135px; text-align:right;">Current Hour</span>
+        </div>
+        <div class="timeline-readout" id="timeScrubberReadout"></div>
+      </section>
+
+      <!-- Commute Route Corridor & Pavement/Bridge Deck Lag -->
       <section class="commute-panel">
         <div class="commute-header">
           <div>
             <strong style="font-size:0.96rem;">Commute Route Corridor &amp; Pavement / Bridge Deck Lag</strong>
-            <div style="font-size:0.78rem; color:var(--muted);">Compares Origin ZIP vs. Destination ZIP (e.g., 48049 Ruby &rarr; 48341 Pontiac) for freeze crossings, patchy fog &amp; bridge-deck lag</div>
+            <div style="font-size:0.78rem; color:var(--muted);">Compares start and end ZIPs for freeze crossings, patchy fog &amp; bridge-deck lag</div>
           </div>
           <div class="commute-inputs">
-            <input id="commuteOrig" type="text" maxlength="5" value="48049" placeholder="Start ZIP" title="Start ZIP" />
+            <input id="commuteOrig" type="text" maxlength="5" value="48049" placeholder="Start ZIP" />
             <span style="color:var(--muted); font-weight:700;">&rarr;</span>
-            <input id="commuteDest" type="text" maxlength="5" value="48341" placeholder="End ZIP" title="Destination ZIP" />
+            <input id="commuteDest" type="text" maxlength="5" value="48060" placeholder="End ZIP" />
             <button class="secondary" id="commuteBtn">Check Route</button>
           </div>
         </div>
         <div class="commute-grid" id="commuteGrid"></div>
       </section>
 
-      <!-- Local CWOP & Surface Stations Near ZIP -->
+      <!-- Closest Local CWOP & Surface Stations -->
       <section class="cwop-panel">
         <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:8px;">
           <div>
-            <strong style="font-size:0.96rem;">Local CWOP &amp; Surface Observation Stations</strong>
-            <div style="font-size:0.78rem; color:var(--muted);" id="cwopSubtitle">Nearby observing stations around active ZIP location</div>
+            <strong style="font-size:0.96rem;">Closest Local CWOP &amp; Surface Stations (Sorted by Distance + Plotted on Map)</strong>
+            <div style="font-size:0.78rem; color:var(--muted);" id="cwopSubtitle">Nearest observing stations to active ZIP coordinates</div>
           </div>
           <span class="obs-tag" id="cwopCountTag">Scanning...</span>
         </div>
         <div class="cwop-grid" id="cwopCardsGrid"></div>
         <div class="pws-form">
-          <input id="cwopId" type="text" placeholder="Custom CWOP ID (e.g. EW9999)" title="APRS/CWOP Station ID" />
-          <input id="cwopHost" type="text" placeholder="CWOP Bridge URL" value="http://localhost:8085" title="Optional local CWOP bridge URL" />
-          <input id="pwsId" type="text" placeholder="WU PWS ID (optional)" title="Weather Underground PWS ID" />
-          <input id="pwsKey" type="password" placeholder="WU API Key (optional)" title="Weather Underground PWS API Key" />
+          <input id="cwopId" type="text" placeholder="Custom CWOP ID (e.g. EW9999)" />
+          <input id="cwopHost" type="text" placeholder="CWOP Bridge URL" value="http://localhost:8085" />
+          <input id="pwsId" type="text" placeholder="WU PWS ID (optional)" />
+          <input id="pwsKey" type="password" placeholder="WU API Key (optional)" />
           <button class="secondary" id="savePwsBtn">Save Custom Station</button>
         </div>
       </section>
 
-      <!-- Forecasted Wind Graph & Cloud Cover Graph -->
+      <!-- Forecasted Wind & Cloud Cover Graphs -->
       <section class="charts-grid">
         <div class="chart-card">
           <strong style="font-size:0.94rem;">Forecasted Wind Speed &amp; Gusts (mph)</strong>
@@ -530,19 +574,21 @@
         </div>
       </section>
 
-      <!-- Cross-Border US + Canadian Radar -->
+      <!-- Cross-Border US + Canadian Radar + Lightning Rings + CWOP Pins + Plume Cone -->
       <section class="radar-card">
         <div class="radar-toolbar">
           <div>
-            <strong style="font-size:0.98rem;">Cross-Border US + Canadian Live &amp; Simulated Radar</strong>
-            <div style="font-size:0.78rem; color:var(--muted);">Blends Environment Canada MSC GeoMet (Exeter CASET) + US NEXRAD / RainViewer + Simulated Reflectivity</div>
+            <strong style="font-size:0.98rem;">Cross-Border US + Canadian Radar, Lightning Rings, CWOP Pins &amp; Wind Plume</strong>
+            <div style="font-size:0.78rem; color:var(--muted);">Includes 10/25/50 mi lightning safety rings, clickable CWOP station markers &amp; downwind drift cone</div>
           </div>
           <div class="radar-btns">
             <button class="r-btn active" data-layer="combined">Combined US + Canada</button>
-            <button class="r-btn" data-layer="eccc_rain">Canada 1km Rain (GeoMet)</button>
-            <button class="r-btn" data-layer="eccc_snow">Canada 1km Snow (GeoMet)</button>
-            <button class="r-btn" data-layer="eccc_extrap">Simulated Extrapolation (dBZ)</button>
-            <button class="r-btn" data-layer="rv_only">US/Global NEXRAD (RainViewer)</button>
+            <button class="r-btn" data-layer="eccc_rain">Canada 1km Rain</button>
+            <button class="r-btn" data-layer="eccc_snow">Canada 1km Snow</button>
+            <button class="r-btn" data-layer="eccc_extrap">Sim. Extrapolation</button>
+            <button class="r-btn" data-layer="rv_only">US NEXRAD</button>
+            <button class="r-btn active" id="toggleLightningBtn">Lightning Rings: ON</button>
+            <button class="r-btn active" id="togglePlumeBtn">Wind Drift Cone: ON</button>
           </div>
         </div>
         <div id="radarMap"></div>
@@ -552,7 +598,7 @@
           <span id="radarFrameTime" style="font-size:0.8rem; font-weight:700; color:var(--accent); min-width:115px; text-align:right;">Latest Frame</span>
         </div>
         <div class="radar-caption">
-          <span id="radarStatus">Radar layer: Combined US NEXRAD + Environment Canada 1km Composite</span>
+          <span id="radarStatus">Radar layer: Combined US NEXRAD + Environment Canada 1km + CWOP Pins + 10/25/50 mi Lightning Rings</span>
           <span>Data: OpenStreetMap, ECCC MSC GeoMet WMS &amp; <a href="https://www.rainviewer.com" target="_blank" rel="noopener" style="color:var(--accent);">RainViewer</a></span>
         </div>
       </section>
@@ -563,7 +609,7 @@
       <h2>Day-by-Day Visual Outlook (With Sunrise / Sunset &amp; Moonrise / Moonset)</h2>
       <section class="daily-strip" id="dailyStrip"></section>
 
-      <h2>3-Hourly Forecast, Cloud Base &amp; Simulated Reflectivity Table</h2>
+      <h2>3-Hourly Forecast, Cloud Base, Lightning CAPE &amp; Simulated Reflectivity Table</h2>
       <div class="table-wrap">
         <table>
           <thead>
@@ -573,7 +619,8 @@
               <th>Consensus</th>
               <th>Cloud Cover</th>
               <th>Cloud Base (AGL)</th>
-              <th>Sim. Radar (dBZ)</th>
+              <th>Lightning / CAPE</th>
+              <th>Sim. Radar</th>
               <th>Precip %</th>
               <th>Wind &amp; Gusts</th>
               <th>Lake Huron</th>
@@ -583,16 +630,18 @@
         </table>
       </div>
 
-      <h2>Same Day of Year — Historical High &amp; Low Across Past Years</h2>
-      <div class="status-bar" id="histStatus">Loading historical highs and lows for the same day of the year...</div>
+      <h2>Current Date Record High &amp; Low vs. Current Observation</h2>
+      <div class="status-bar" id="histStatus">Loading current date record high &amp; low vs. current observed temperature...</div>
       <section class="hist-records" id="histRecordsBox"></section>
       <div class="table-wrap">
         <table>
           <thead>
             <tr>
-              <th>Date (Same Day of Year)</th>
+              <th>Date (Current Day)</th>
               <th>Historical High</th>
               <th>Historical Low</th>
+              <th>vs. Current Observed High</th>
+              <th>vs. Current Observed Low</th>
             </tr>
           </thead>
           <tbody id="histRowsBody"></tbody>
@@ -600,12 +649,18 @@
       </div>
     </main>
 
-    <!-- ==================== VIEW 2: LAKE HURON MARINE, WAVES, ICE & LOCAL NOAA/USGS RIVER GAUGES ==================== -->
+    <!-- ==================== VIEW 2 ==================== -->
     <section id="marineView" class="view-section">
       <div class="status-bar" id="marineStatus">Loading Southern Lake Huron wave/chop model, water temperature, ice coverage &amp; St. Clair / Black River NOAA/USGS gauges...</div>
 
       <h2>Southern Lake Huron Water Temperature, Ice Coverage &amp; Marine Conditions</h2>
       <section class="marine-grid" id="lakeHuronSummaryGrid"></section>
+
+      <div class="rose-card">
+        <strong style="font-size:0.94rem;">72-Hour Southern Lake Huron Wave Height &amp; Onshore Fetch Trend</strong>
+        <div style="font-size:0.76rem; color:var(--muted);">Cyan = Significant Wave Height (ft) · Amber = St. Clair River Chop (ft)</div>
+        <canvas id="marineRoseCanvas" width="960" height="150"></canvas>
+      </div>
 
       <h2>Local River NOAA CO-OPS &amp; USGS Real-Time Gauges (St. Clair River &amp; Black River)</h2>
       <section class="marine-grid" id="riverGaugesGrid"></section>
@@ -629,7 +684,7 @@
       </div>
     </section>
 
-    <!-- ==================== VIEW 3: ASTRONOMY, SUN/MOON & US/CA HOLIDAYS ==================== -->
+    <!-- ==================== VIEW 3 ==================== -->
     <section id="skyView" class="view-section">
       <div class="status-bar" id="skyStatus">Sky &amp; holiday schedule localized to active ZIP coordinates...</div>
 
@@ -640,36 +695,51 @@
       <div class="holiday-list" id="holidaysGrid"></div>
     </section>
 
-    <!-- ==================== VIEW 4: NORTH AMERICA JET STREAM & ALL AIRPORTS ==================== -->
+    <!-- ==================== VIEW 4 ==================== -->
     <section id="flightView" class="view-section">
       <div class="controls">
         <div class="input-group">
-          <label for="airportFilter">Filter North America Airports (Code / City / State)</label>
-          <input id="airportFilter" type="text" placeholder="Type ORD, MDW, DTW, YYZ, LAX..." style="width:225px;" />
+          <label for="airportFilter">Filter North America Airports</label>
+          <input id="airportFilter" type="text" placeholder="Type ORD, MDW, DTW, YYZ..." style="width:190px;" />
         </div>
 
         <div class="input-group">
           <label for="origSelect">Departure Airport</label>
-          <select id="origSelect" style="max-width:250px;"></select>
+          <select id="origSelect" style="max-width:235px;"></select>
         </div>
 
         <div class="input-group">
           <label for="destSelect">Arrival Airport</label>
-          <select id="destSelect" style="max-width:250px;"></select>
+          <select id="destSelect" style="max-width:235px;"></select>
+        </div>
+
+        <div class="input-group">
+          <label for="aircraftPreset">Aircraft Type</label>
+          <select id="aircraftPreset">
+            <option value="290">Turboprop (~290 mph)</option>
+            <option value="470">Regional Jet (~470 mph)</option>
+            <option value="530" selected>Narrowbody Jet (~530 mph)</option>
+            <option value="565">Widebody Long-Haul (~565 mph)</option>
+          </select>
         </div>
 
         <div class="input-group">
           <label for="altSelect">Cruise Level</label>
           <select id="altSelect">
-            <option value="300hPa">FL300 (~30,000 ft / 300 hPa)</option>
-            <option value="250hPa" selected>FL340 (~34,000 ft / 250 hPa)</option>
-            <option value="200hPa">FL390 (~39,000 ft / 200 hPa)</option>
+            <option value="300hPa">FL300 (~30,000 ft)</option>
+            <option value="250hPa" selected>FL340 (~34,000 ft)</option>
+            <option value="200hPa">FL390 (~39,000 ft)</option>
           </select>
         </div>
 
         <div class="input-group">
-          <label for="tasInput">Aircraft Airspeed (mph)</label>
-          <input id="tasInput" type="number" value="530" min="250" max="620" style="width:105px;" />
+          <label for="tasInput">Airspeed (mph)</label>
+          <input id="tasInput" type="number" value="530" min="250" max="620" style="width:92px;" />
+        </div>
+
+        <div class="input-group">
+          <label for="taxiBufferInput">Taxi/Climb Buffer (m)</label>
+          <input id="taxiBufferInput" type="number" value="25" min="0" max="90" style="width:95px;" />
         </div>
 
         <div class="input-group">
@@ -678,6 +748,7 @@
         </div>
 
         <button class="primary" id="calcFlightBtn">Simulate Flight</button>
+        <button class="secondary" id="exportFlightCsvBtn">Export Flight CSV</button>
       </div>
 
       <div class="status-bar" id="flightStatus">Loading North America airports &amp; upper-level jet stream wind grid...</div>
@@ -701,7 +772,7 @@
               <th>Route Jet Wind</th>
               <th>Net Wind Component</th>
               <th>Ground Speed</th>
-              <th>Cruise Duration</th>
+              <th>Gate-to-Gate Est.</th>
               <th>Delta vs. Still Air</th>
             </tr>
           </thead>
@@ -719,7 +790,7 @@
               <th>Net Tailwind / Headwind</th>
               <th>True Airspeed</th>
               <th>Actual Ground Speed</th>
-              <th>Cruise Duration</th>
+              <th>Gate-to-Gate Est.</th>
               <th>Schedule Impact</th>
             </tr>
           </thead>
@@ -731,9 +802,9 @@
     <footer>
       <a href="https://radar.weather.gov/station/kdtx/standard" target="_blank" rel="noopener">NWS KDTX White Lake Radar</a>
       <a href="https://weather.gc.ca/?layers=radar&center=43.35,-81.38&zoom=7" target="_blank" rel="noopener">Environment Canada Exeter Radar</a>
+      <a href="https://www.blitzortung.org/en/live_lightning_maps.php?map=30" target="_blank" rel="noopener">Live Lightning Strike Map</a>
       <a href="https://coastwatch.glerl.noaa.gov/satellite-data-products/great-lakes-surface-environmental-analysis-glsea/" target="_blank" rel="noopener">NOAA GLERL Lake Huron Temp &amp; Ice</a>
-      <a href="https://tidesandcurrents.noaa.gov/stationhome.html?id=9014087" target="_blank" rel="noopener">NOAA St. Clair River Gauge (Port Huron)</a>
-      <a href="https://www.weather.gov/dtx/" target="_blank" rel="noopener">NWS Alerts &amp; Statements</a>
+      <a href="https://tidesandcurrents.noaa.gov/stationhome.html?id=9014087" target="_blank" rel="noopener">NOAA St. Clair River Gauge</a>
     </footer>
   </div>
 
@@ -746,7 +817,6 @@
 
     const ANCHOR_LAT = 42.99, ANCHOR_LON = -82.58;
     const LAKE_HURON_SST_C = { 1: 2.2, 2: 0.8, 3: 1.1, 4: 3.3, 5: 7.8, 6: 15.0, 7: 20.6, 8: 21.7, 9: 20.0, 10: 15.0, 11: 9.4, 12: 5.0 };
-    // Typical seasonal ice concentration (%) baseline for Southern Lake Huron when live satellite ice grid is between passes
     const LAKE_HURON_TYPICAL_ICE_PCT = { 1: 28, 2: 52, 3: 34, 4: 4, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0, 10: 0, 11: 0, 12: 6 };
 
     const BUILTIN_ZIPS = {
@@ -760,8 +830,6 @@
       "48097": { name: "Yale, MI", lat: 43.13, lon: -82.80 },
       "48065": { name: "Romeo, MI", lat: 42.80, lon: -83.01 },
       "48371": { name: "Oxford, MI", lat: 42.82, lon: -83.26 },
-      "48362": { name: "Lake Orion, MI", lat: 42.78, lon: -83.24 },
-      "48341": { name: "Pontiac, MI", lat: 42.64, lon: -83.29 },
       "60601": { name: "Chicago, IL", lat: 41.88, lon: -87.62 },
       "48201": { name: "Detroit, MI", lat: 42.34, lon: -83.06 },
       "73069": { name: "Norman, OK", lat: 35.22, lon: -97.44 }
@@ -849,7 +917,43 @@
 
     let currentLoc = { zip: "48049", name: "North Street / Ruby, MI", lat: 42.99, lon: -82.58, miles: 0 };
     let latestRows = [];
-    let latestDailySunMoon = [];
+    let latestFlightDaily = [];
+
+    const toRad = d => d * Math.PI / 180;
+    const toDeg = r => (r * 180 / Math.PI + 360) % 360;
+
+    function parseCsvLine(line) {
+      const result = [];
+      let cur = "", inQuotes = false;
+      for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        if (ch === '"') {
+          if (inQuotes && line[i + 1] === '"') { cur += '"'; i++; }
+          else { inQuotes = !inQuotes; }
+        } else if (ch === "," && !inQuotes) {
+          result.push(cur);
+          cur = "";
+        } else {
+          cur += ch;
+        }
+      }
+      result.push(cur);
+      return result;
+    }
+
+    function updateCacheBadge(isOffline = false) {
+      const badge = document.getElementById("cacheStateBadge");
+      if (!badge) return;
+      if (isOffline || !navigator.onLine) {
+        badge.textContent = "Offline Cache";
+        badge.className = "cache-pill offline";
+      } else {
+        badge.textContent = "Live Network";
+        badge.className = "cache-pill";
+      }
+    }
+    window.addEventListener("online", () => updateCacheBadge(false));
+    window.addEventListener("offline", () => updateCacheBadge(true));
 
     document.querySelectorAll(".nav-tab").forEach(btn => {
       btn.addEventListener("click", () => {
@@ -863,7 +967,7 @@
         } else if (btn.dataset.tab === "marineView") {
           loadLakeHuronAndRiverMarine();
         } else if (btn.dataset.tab === "skyView") {
-          renderSkyAndHolidays(currentLoc, latestDailySunMoon);
+          renderSkyAndHolidays(currentLoc);
         } else if (btn.dataset.tab === "flightView") {
           runFlightSim();
         }
@@ -912,10 +1016,19 @@
     }
 
     function haversineMiles(lat1, lon1, lat2, lon2) {
-      const R = 3958.8, toRad = d => d * Math.PI / 180;
+      const R = 3958.8;
       const dLat = toRad(lat2 - lat1), dLon = toRad(lon2 - lon1);
       const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
       return 2 * R * Math.asin(Math.sqrt(a));
+    }
+
+    function destinationPoint(lat, lon, bearingDeg, distMiles) {
+      const R = 3958.8;
+      const brng = toRad(bearingDeg);
+      const lat1 = toRad(lat), lon1 = toRad(lon);
+      const lat2 = Math.asin(Math.sin(lat1)*Math.cos(distMiles/R) + Math.cos(lat1)*Math.sin(distMiles/R)*Math.cos(brng));
+      const lon2 = lon1 + Math.atan2(Math.sin(brng)*Math.sin(distMiles/R)*Math.cos(lat1), Math.cos(distMiles/R) - Math.sin(lat1)*Math.sin(lat2));
+      return [toDeg(lat2) > 180 ? toDeg(lat2) - 360 : toDeg(lat2), ((toDeg(lon2) + 540) % 360) - 180];
     }
 
     function calcCloudBaseFt(tempF, dewF) {
@@ -942,10 +1055,35 @@
       return 0;
     }
 
-    // Pavement & Bridge Deck Lag Model
+    // Lightning Proximity & Convective CAPE Risk Classifier
+    function evaluateLightningRisk(cape, liftedIdx, wcode, simDbz) {
+      const isStormCode = [95, 96, 99].includes(wcode);
+      if (isStormCode || (cape != null && cape >= 1200) || simDbz >= 40) {
+        return {
+          level: "HIGH LIGHTNING",
+          cls: "risk-high",
+          badge: "Active / Imminent (<10–25 mi)",
+          detail: `CAPE ${cape != null ? Math.round(cape) + " J/kg" : "Elevated"} · High cloud-to-ground strike potential`
+        };
+      }
+      if ((cape != null && cape >= 350) || (liftedIdx != null && liftedIdx <= -1) || simDbz >= 30) {
+        return {
+          level: "ELEVATED",
+          cls: "risk-mod",
+          badge: "Watch 25–50 mi Perimeter",
+          detail: `CAPE ${cape != null ? Math.round(cape) + " J/kg" : "Moderate"} · Isolated convective cells possible`
+        };
+      }
+      return {
+        level: "LOW / QUIET",
+        cls: "risk-low",
+        badge: "No Nearby Lightning",
+        detail: `CAPE ${cape != null ? Math.round(cape) + " J/kg" : "0 J/kg"} · Stable atmosphere`
+      };
+    }
+
     function evaluatePavementLag(tempF, dewF, cloudCover, windMph, precipIn) {
       const spread = dewF != null ? (tempF - dewF) : 8;
-      // Clear skies + light winds allow elevated bridge decks and shaded rural roads to radiate heat and cool 3-5F below 2m air temp
       const radiationalDrop = (cloudCover < 40 && windMph < 12) ? 4.0 : (cloudCover < 70 ? 2.0 : 0.8);
       const estBridgeTemp = tempF - radiationalDrop;
       const wetSurface = (precipIn != null && precipIn > 0.005) || spread <= 2.5;
@@ -982,11 +1120,35 @@
       };
     }
 
-    // ==================== COMMUTE ROUTE CORRIDOR COMPARISON ====================
+    // ==================== INTERACTIVE FORECAST TIME MACHINE SCRUBBER ====================
+    function updateTimeScrubber(idx) {
+      if (!latestRows.length) return;
+      const r = latestRows[idx] || latestRows[0];
+      const lbl = document.getElementById("timeScrubberLabel");
+      const box = document.getElementById("timeScrubberReadout");
+      lbl.textContent = idx === 0 ? `Now (${r.ts.slice(11, 16)})` : `+${r.lead}h (${r.ts.replace("T", " ").slice(5, 16)})`;
+
+      const ltg = evaluateLightningRisk(r.cape, r.liftedIdx, r.wcode, r.simDbz);
+      const lag = evaluatePavementLag(r.wtd, r.dew, r.cloudCover, r.wspd, r.precipIn);
+      box.innerHTML = `
+        <div class="t-chip"><span>Temp / Feels</span><strong>${r.wtd.toFixed(1)}°F / ${Math.round(r.feelsLike)}°F</strong></div>
+        <div class="t-chip"><span>Wind &amp; Gusts</span><strong>${degToCardinal(r.wdir)} ${Math.round(r.wspd)} (G ${Math.round(r.wgst)})</strong></div>
+        <div class="t-chip"><span>Cloud Cover / Base</span><strong>${Math.round(r.cloudCover)}% · ~${r.cloudBaseFt ? r.cloudBaseFt.toLocaleString() + " ft" : "—"}</strong></div>
+        <div class="t-chip"><span>Lightning / CAPE</span><strong class="${ltg.cls}">${ltg.level} (${r.cape != null ? Math.round(r.cape) : 0} J/kg)</strong></div>
+        <div class="t-chip"><span>Bridge Deck Est.</span><strong class="${lag.cls}">~${Math.round(lag.bridgeTemp)}°F</strong></div>
+        <div class="t-chip"><span>Sim. Radar / Pop</span><strong>${r.simDbz > 0 ? "~" + r.simDbz + " dBZ" : "Clear"} · ${r.pop ?? 0}%</strong></div>
+      `;
+    }
+
+    document.getElementById("timeScrubber").addEventListener("input", e => {
+      updateTimeScrubber(parseInt(e.target.value, 10));
+    });
+
+    // ==================== COMMUTE CORRIDOR ====================
     async function runCommuteCorridor() {
       const grid = document.getElementById("commuteGrid");
-      const z1 = document.getElementById("commuteOrig").value.trim() || "48049";
-      const z2 = document.getElementById("commuteDest").value.trim() || "48341";
+      const z1 = document.getElementById("commuteOrig").value.trim() || currentLoc.zip;
+      const z2 = document.getElementById("commuteDest").value.trim() || "48060";
 
       grid.innerHTML = `<div class="c-card"><div class="k">Scanning Corridor</div><div class="v">Loading ${z1} &rarr; ${z2}...</div></div>`;
 
@@ -1050,26 +1212,22 @@
       }
     }
 
-    // ==================== LAKE HURON CHOP/WAVES, TEMP, ICE COVER & LOCAL NOAA/USGS RIVER GAUGES ====================
+    // ==================== LAKE HURON MARINE + 72H WAVE ROSE GRAPH + RIVER GAUGES ====================
     function estimateLakeHuronWaves(windMph, dirDeg) {
-      // Southern Lake Huron effective fetch (miles) by wind direction
-      // NNW (330) through NE (45) has 100-180 mile open fetch down the main axis of Lake Huron into Port Huron
       const d = ((dirDeg % 360) + 360) % 360;
-      let fetchMi = 18; // Offshore W/SW short fetch near western shore
-      if (d >= 325 || d <= 35) fetchMi = 165; // Long-axis N/NNW/NNE fetch
-      else if (d > 35 && d <= 85) fetchMi = 85; // ENE/E Ontario shoreline fetch
-      else if (d > 85 && d <= 155) fetchMi = 35; // SE fetch
-      else if (d >= 290 && d < 325) fetchMi = 55; // NW oblique fetch
+      let fetchMi = 18;
+      if (d >= 325 || d <= 35) fetchMi = 165;
+      else if (d > 35 && d <= 85) fetchMi = 85;
+      else if (d > 85 && d <= 155) fetchMi = 35;
+      else if (d >= 290 && d < 325) fetchMi = 55;
 
-      // Fetch-limited significant wave height approximation (SMB/JONSWAP simplified)
       const knots = windMph * 0.868976;
       const sigWaveFt = knots < 5
         ? 0.3
         : Math.min(18.0, +(0.016 * Math.pow(knots, 1.32) * Math.pow(fetchMi, 0.38)).toFixed(1));
       const periodSec = Math.max(2.0, +(2.2 + Math.sqrt(sigWaveFt) * 1.45).toFixed(1));
 
-      // St. Clair River chop (current ~3.5-5 mph opposing N/NE winds creates steep standing chop at Blue Water Bridge / Fort Gratiot)
-      const opposingCurrent = (d >= 150 && d <= 240); // S/SW wind opposing southward river current
+      const opposingCurrent = (d >= 150 && d <= 240);
       const riverChopFt = opposingCurrent
         ? +(Math.min(4.5, 0.4 + windMph * 0.085)).toFixed(1)
         : +(Math.min(3.5, 0.3 + windMph * 0.055)).toFixed(1);
@@ -1081,6 +1239,58 @@
       else if (sigWaveFt >= 2.0) { advisory = "Moderate Chop"; cls = "risk-mod"; }
 
       return { fetchMi, sigWaveFt, periodSec, riverChopFt, advisory, cls };
+    }
+
+    function drawMarineWaveChart(series) {
+      const canvas = document.getElementById("marineRoseCanvas");
+      if (!canvas || !series.length) return;
+      const ctx = canvas.getContext("2d");
+      const W = canvas.width, H = canvas.height;
+      ctx.clearRect(0, 0, W, H);
+      ctx.fillStyle = "#08101a";
+      ctx.fillRect(0, 0, W, H);
+
+      const maxH = Math.max(6, ...series.map(s => s.sigWaveFt)) + 1;
+      const padL = 36, padR = 14, padT = 14, padB = 22;
+      const pW = W - padL - padR, pH = H - padT - padB;
+
+      ctx.strokeStyle = "rgba(255,255,255,0.08)";
+      ctx.fillStyle = "#98aec4";
+      ctx.font = "11px sans-serif";
+      for (let g = 0; g <= 2; g++) {
+        const val = Math.round((maxH / 2) * g);
+        const y = padT + pH - (val / maxH) * pH;
+        ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(W - padR, y); ctx.stroke();
+        ctx.fillText(`${val}ft`, 4, y + 4);
+      }
+
+      const xAt = i => padL + (i / Math.max(1, series.length - 1)) * pW;
+      const yAt = v => padT + pH - (Math.max(0, v) / maxH) * pH;
+
+      // River Chop (Amber)
+      ctx.beginPath();
+      series.forEach((s, i) => {
+        const x = xAt(i), y = yAt(s.riverChopFt);
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      });
+      ctx.strokeStyle = "#f59e0b";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Lake Huron Wave Height (Cyan)
+      ctx.beginPath();
+      series.forEach((s, i) => {
+        const x = xAt(i), y = yAt(s.sigWaveFt);
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      });
+      ctx.strokeStyle = "#38bdf8";
+      ctx.lineWidth = 2.6;
+      ctx.stroke();
+
+      ctx.fillStyle = "#98aec4";
+      ctx.fillText("Now", padL, H - 5);
+      ctx.fillText("+36h", padL + pW * 0.5 - 12, H - 5);
+      ctx.fillText("+72h", W - padR - 28, H - 5);
     }
 
     async function loadLakeHuronAndRiverMarine() {
@@ -1097,12 +1307,7 @@
       let waterTempSource = "NOAA GLSEA Climatology Baseline";
       let icePct = LAKE_HURON_TYPICAL_ICE_PCT[month] ?? 0;
 
-      // 1. Poll NOAA CO-OPS Station 9014087 (Dry Dock / Port Huron, St. Clair River) & 9014098 (Fort Gratiot)
-      let noaaWaterLevel = "—";
-      let noaaAirTemp = "—";
-      let noaaWaterTempObs = null;
-      let noaaTime = "";
-
+      let noaaWaterLevel = "—", noaaTime = "";
       try {
         const [wlRes, wtRes] = await Promise.all([
           fetch("https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?date=latest&station=9014087&product=water_level&datum=IGLD&units=english&time_zone=lst_ldt&format=json"),
@@ -1120,14 +1325,12 @@
           const wtData = await wtRes.json();
           const wRow = wtData?.data?.[0];
           if (wRow && wRow.v) {
-            noaaWaterTempObs = parseFloat(wRow.v);
-            lakeWaterTempF = +noaaWaterTempObs.toFixed(1);
+            lakeWaterTempF = +parseFloat(wRow.v).toFixed(1);
             waterTempSource = `Live NOAA Fort Gratiot Sensor (${wRow.t})`;
           }
         }
       } catch (e) {}
 
-      // 2. Poll USGS Instantaneous Values for St. Clair River (04159130) & Black River near Port Huron (04160050)
       let usgsStClairFt = "—", usgsBlackRiverFt = "—", usgsBlackRiverCfs = "—";
       try {
         const uRes = await fetch("https://waterservices.usgs.gov/nwis/iv/?format=json&sites=04159130,04160050&parameterCd=00065,00060&siteStatus=all");
@@ -1146,7 +1349,6 @@
         }
       } catch (e) {}
 
-      // 3. Fetch Southern Lake Huron Offshore Marine Wind Point (43.15N, -82.35W, ~12 mi NNE of Blue Water Bridge)
       try {
         const mUrl = "https://api.open-meteo.com/v1/forecast?latitude=43.15&longitude=-82.35&wind_speed_unit=mph&temperature_unit=fahrenheit&forecast_days=5&hourly=temperature_2m,wind_speed_10m,wind_direction_10m,wind_gusts_10m&timezone=America/Detroit";
         const mRes = await fetch(mUrl);
@@ -1162,7 +1364,6 @@
         const curMarineAir = h.temperature_2m?.[startIdx] ?? 38;
         const curWave = estimateLakeHuronWaves(curWind, curDir);
 
-        // Adjust ice coverage estimate dynamically if sub-freezing air persists in winter
         if (month === 12 && curMarineAir < 25) icePct = Math.max(icePct, 10);
         if ((month === 1 || month === 2) && curMarineAir < 20) icePct = Math.min(85, icePct + 8);
 
@@ -1215,6 +1416,12 @@
           </div>
         `;
 
+        const waveSeries72 = [];
+        for (let i = startIdx; i < Math.min(startIdx + 72, times.length); i++) {
+          waveSeries72.push(estimateLakeHuronWaves(h.wind_speed_10m?.[i] ?? 0, h.wind_direction_10m?.[i] ?? 0));
+        }
+        drawMarineWaveChart(waveSeries72);
+
         const rowsHtml = [];
         for (let i = startIdx; i < Math.min(startIdx + 96, times.length); i += 3) {
           const w = h.wind_speed_10m?.[i] ?? 0;
@@ -1238,10 +1445,7 @@
       }
     }
 
-    // ==================== SUNRISE / SUNSET & MOONRISE / MOONSET ====================
-    const toRad = d => d * Math.PI / 180;
-    const toDeg = r => (r * 180 / Math.PI + 360) % 360;
-
+    // ==================== SUN / MOON / ASTRONOMY / HOLIDAYS ====================
     function formatMinutesToLocalTime(minsFromMidnight) {
       if (minsFromMidnight == null || Number.isNaN(minsFromMidnight)) return "—";
       const m = ((Math.round(minsFromMidnight) % 1440) + 1440) % 1440;
@@ -1311,7 +1515,6 @@
       };
     }
 
-    // ==================== US & CANADIAN HOLIDAYS ====================
     function getNthWeekdayOfMonth(year, month1to12, weekday0Sun, nth) {
       const first = new Date(Date.UTC(year, month1to12 - 1, 1));
       const firstWd = first.getUTCDay();
@@ -1416,47 +1619,68 @@
       `).join("");
     }
 
-    // ==================== NWS ALERTS ====================
-    async function loadNwsAlerts(lat, lon) {
+    // ==================== NWS ALERTS + LIGHTNING PROXIMITY BANNER ====================
+    async function loadNwsAlerts(lat, lon, curRow) {
       const box = document.getElementById("alertBox");
+      const items = [];
+
+      if (curRow) {
+        const ltg = evaluateLightningRisk(curRow.cape, curRow.liftedIdx, curRow.wcode, curRow.simDbz);
+        if (ltg.level !== "LOW / QUIET") {
+          items.push(`<div class="alert-item">
+            <span class="alert-badge ${ltg.level === "ELEVATED" ? "watch" : ""}">⚡ ${ltg.level}</span>
+            <strong>${ltg.badge} (${currentLoc.zip}):</strong> ${ltg.detail}
+          </div>`);
+        }
+      }
+
       try {
         const res = await fetch(`https://api.weather.gov/alerts/active?point=${lat.toFixed(3)},${lon.toFixed(3)}`, {
           headers: { "Accept": "application/geo+json" }
         });
-        if (!res.ok) return;
-        const data = await res.json();
-        const features = data.features || [];
-        if (!features.length) {
-          box.classList.remove("visible");
-          box.innerHTML = "";
-          return;
+        if (res.ok) {
+          const data = await res.json();
+          const features = data.features || [];
+          features.slice(0, 5).forEach(f => {
+            const p = f.properties || {};
+            const ev = p.event || "Weather Advisory";
+            const cls = ev.toLowerCase().includes("watch") ? "watch"
+                      : ev.toLowerCase().includes("statement") ? "statement" : "";
+            items.push(`<div class="alert-item">
+              <span class="alert-badge ${cls}">${ev}</span>
+              <strong>${p.headline || p.areaDesc || ""}</strong>
+            </div>`);
+          });
         }
-        box.innerHTML = features.slice(0, 5).map(f => {
-          const p = f.properties || {};
-          const ev = p.event || "Weather Advisory";
-          const cls = ev.toLowerCase().includes("watch") ? "watch"
-                    : ev.toLowerCase().includes("statement") ? "statement" : "";
-          return `<div class="alert-item">
-            <span class="alert-badge ${cls}">${ev}</span>
-            <strong>${p.headline || p.areaDesc || ""}</strong>
-          </div>`;
-        }).join("");
-        box.classList.add("visible");
-      } catch (e) {
+      } catch (e) {}
+
+      if (!items.length) {
         box.classList.remove("visible");
+        box.innerHTML = "";
+      } else {
+        box.innerHTML = items.join("");
+        box.classList.add("visible");
       }
     }
 
-    // ==================== LOCAL CWOP STATIONS ====================
+    // ==================== CLOSEST LOCAL CWOP STATIONS + CLICKABLE MAP PINS ====================
+    let cwopMarkerGroup = null;
+
     async function loadNearbyCwopStations(loc) {
       const grid = document.getElementById("cwopCardsGrid");
       const sub = document.getElementById("cwopSubtitle");
       const tag = document.getElementById("cwopCountTag");
-      sub.textContent = `Scanning CWOP / MADIS / NWS stations near ${loc.name} (${loc.zip})...`;
+      sub.textContent = `Finding closest CWOP / MADIS / surface stations to ${loc.name} (${loc.zip})...`;
 
       const customCwopId = (localStorage.getItem("bw_cwop_id") || "").trim().toUpperCase();
       const customCwopHost = (localStorage.getItem("bw_cwop_host") || "http://localhost:8085").trim().replace(/\/$/, "");
       const cards = [];
+
+      if (cwopMarkerGroup && radarMap) {
+        cwopMarkerGroup.clearLayers();
+      } else if (radarMap) {
+        cwopMarkerGroup = L.layerGroup().addTo(radarMap);
+      }
 
       if (customCwopId && customCwopHost) {
         try {
@@ -1464,12 +1688,15 @@
           if (cRes.ok) {
             const c = await cRes.json();
             if (!c.error && c.temp_f != null) {
-              cards.push(`<div class="cwop-card">
-                <span class="st-dist">Custom CWOP</span>
-                <div class="st-id">${c.station}</div>
-                <div><strong>${c.temp_f}°F</strong> · Wind ${degToCardinal(c.wind_dir_deg)} ${c.wind_mph} mph (G ${c.gust_mph})</div>
-                <div style="color:var(--muted); font-size:0.75rem;">Baro: ${c.baro_inhg ?? "—"} inHg</div>
-              </div>`);
+              cards.push({
+                distMi: 0,
+                html: `<div class="cwop-card">
+                  <span class="st-dist">Custom CWOP</span>
+                  <div class="st-id">${c.station}</div>
+                  <div><strong>${c.temp_f}°F</strong> · Wind ${degToCardinal(c.wind_dir_deg)} ${c.wind_mph} mph (G ${c.gust_mph})</div>
+                  <div style="color:var(--muted); font-size:0.75rem;">Baro: ${c.baro_inhg ?? "—"} inHg</div>
+                </div>`
+              });
             }
           }
         } catch (e) {}
@@ -1484,13 +1711,20 @@
         if (stationsUrl) {
           const stListRes = await fetch(stationsUrl, { headers: { "Accept": "application/geo+json" } });
           const stListData = await stListRes.json();
-          const feats = (stListData.features || []).slice(0, 6);
+          const ranked = (stListData.features || [])
+            .map(f => {
+              const coords = f.geometry?.coordinates || [loc.lon, loc.lat];
+              const distExact = haversineMiles(loc.lat, loc.lon, coords[1], coords[0]);
+              return { f, distExact, lat: coords[1], lon: coords[0] };
+            })
+            .sort((a, b) => a.distExact - b.distExact)
+            .slice(0, 6);
 
-          for (const f of feats) {
+          for (const item of ranked) {
+            const f = item.f;
             const code = f.properties?.stationIdentifier;
             const sName = f.properties?.name || code;
-            const coords = f.geometry?.coordinates || [loc.lon, loc.lat];
-            const distMi = Math.round(haversineMiles(loc.lat, loc.lon, coords[1], coords[0]));
+            const distMi = Math.round(item.distExact);
 
             let obsLine = "Awaiting latest report";
             try {
@@ -1508,27 +1742,40 @@
               }
             } catch (e) {}
 
-            cards.push(`<div class="cwop-card">
-              <span class="st-dist">${distMi} mi from ${loc.zip}</span>
-              <div class="st-id">${code} · CWOP/MADIS</div>
-              <div>${obsLine}</div>
-              <div style="color:var(--muted); font-size:0.75rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${sName}</div>
-            </div>`);
+            if (cwopMarkerGroup) {
+              L.circleMarker([item.lat, item.lon], {
+                radius: 5, color: "#34d399", fillColor: "#10b981", fillOpacity: 0.88
+              })
+                .bindPopup(`<strong>${code} (${distMi} mi from ${loc.zip})</strong><br/>${sName}<br/>${obsLine}`)
+                .addTo(cwopMarkerGroup);
+            }
+
+            cards.push({
+              distMi,
+              html: `<div class="cwop-card">
+                <span class="st-dist">${distMi} mi away</span>
+                <div class="st-id">${code} · CWOP/MADIS</div>
+                <div>${obsLine}</div>
+                <div style="color:var(--muted); font-size:0.75rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${sName}</div>
+              </div>`
+            });
           }
         }
       } catch (e) {}
+
+      cards.sort((a, b) => a.distMi - b.distMi);
 
       if (!cards.length) {
         grid.innerHTML = `<div class="cwop-card">No nearby CWOP/MADIS station telemetry returned for ${loc.zip}.</div>`;
         tag.textContent = "0 Stations";
       } else {
-        grid.innerHTML = cards.join("");
-        tag.textContent = `${cards.length} Local Stations`;
+        grid.innerHTML = cards.map(c => c.html).join("");
+        tag.textContent = `${cards.length} Closest Stations`;
       }
-      sub.textContent = `Showing CWOP/MADIS & surface stations closest to ${loc.name} (${loc.zip})`;
+      sub.textContent = `Closest CWOP/MADIS stations to ${loc.name} (${loc.zip}), ordered nearest first & pinned on radar`;
     }
 
-    // ==================== FORECASTED WIND & CLOUD COVER GRAPHS + SCRUBBER ====================
+    // ==================== GRAPHS ====================
     function drawForecastGraphs(rows) {
       const slice = rows.slice(0, 48);
       if (!slice.length) return;
@@ -1639,6 +1886,7 @@
         const tLabel = r.ts.replace("T", " ").slice(5, 16);
         wOut.textContent = `${tLabel}: ${degToCardinal(r.wdir)} ${Math.round(r.wspd)} mph (Gusts ${Math.round(r.wgst)} mph)`;
         cOut.textContent = `${tLabel}: ${Math.round(r.cloudCover)}% Cloud Cover · Base ~${r.cloudBaseFt ? r.cloudBaseFt.toLocaleString() + " ft" : "—"}`;
+        updateTimeScrubber(idx);
       };
 
       [wCanvas, cCanvas].forEach(cv => {
@@ -1648,8 +1896,13 @@
       });
     }
 
-    // ==================== CROSS-BORDER US + CANADIAN RADAR ====================
+    // ==================== CROSS-BORDER RADAR + LIGHTNING RINGS + WIND DRIFT CONE ====================
     let radarMap = null;
+    let radarZipMarker = null;
+    let lightningRingsGroup = null;
+    let windPlumeGroup = null;
+    let showLightningRings = true;
+    let showWindPlume = true;
     let rvTileLayers = [];
     let rvFrames = [];
     let rvCurrentIdx = 0;
@@ -1658,6 +1911,64 @@
     let ecccSnowWms = null;
     let ecccExtrapWms = null;
     let activeRadarMode = "combined";
+
+    function updateRadarOverlays(loc, curRow) {
+      if (!radarMap) return;
+      if (!lightningRingsGroup) lightningRingsGroup = L.layerGroup().addTo(radarMap);
+      if (!windPlumeGroup) windPlumeGroup = L.layerGroup().addTo(radarMap);
+
+      lightningRingsGroup.clearLayers();
+      windPlumeGroup.clearLayers();
+
+      if (showLightningRings) {
+        // 10 mi (16093m), 25 mi (40233m), 50 mi (80467m) lightning safety perimeters
+        const rings = [
+          { meters: 16093, label: "10 mi Lightning Safety Ring (Seek Shelter)", color: "#f43f5e" },
+          { meters: 40233, label: "25 mi Lightning Caution Ring", color: "#f59e0b" },
+          { meters: 80467, label: "50 mi Distant Storm Perimeter", color: "#38bdf8" }
+        ];
+        rings.forEach(rg => {
+          L.circle([loc.lat, loc.lon], {
+            radius: rg.meters,
+            color: rg.color,
+            weight: 1.4,
+            dashArray: "6, 6",
+            fillOpacity: 0.02
+          }).bindPopup(rg.label).addTo(lightningRingsGroup);
+        });
+      }
+
+      if (showWindPlume && curRow) {
+        // Project 25-mile downwind parcel drift cone from current wind direction
+        const downwindBearing = (curRow.wdir + 180) % 360;
+        const leftEdge = destinationPoint(loc.lat, loc.lon, (downwindBearing - 16 + 360) % 360, 28);
+        const rightEdge = destinationPoint(loc.lat, loc.lon, (downwindBearing + 16) % 360, 28);
+        const centerTip = destinationPoint(loc.lat, loc.lon, downwindBearing, 28);
+
+        L.polygon([[loc.lat, loc.lon], leftEdge, centerTip, rightEdge], {
+          color: "#818cf8",
+          weight: 1.5,
+          fillColor: "#818cf8",
+          fillOpacity: 0.14
+        })
+          .bindPopup(`Downwind Air-Parcel Drift Cone (${degToCardinal(curRow.wdir)} wind blowing toward ${degToCardinal(downwindBearing)} at ${Math.round(curRow.wspd)} mph)`)
+          .addTo(windPlumeGroup);
+      }
+    }
+
+    document.getElementById("toggleLightningBtn").addEventListener("click", e => {
+      showLightningRings = !showLightningRings;
+      e.target.classList.toggle("active", showLightningRings);
+      e.target.textContent = `Lightning Rings: ${showLightningRings ? "ON" : "OFF"}`;
+      updateRadarOverlays(currentLoc, latestRows[0]);
+    });
+
+    document.getElementById("togglePlumeBtn").addEventListener("click", e => {
+      showWindPlume = !showWindPlume;
+      e.target.classList.toggle("active", showWindPlume);
+      e.target.textContent = `Wind Drift Cone: ${showWindPlume ? "ON" : "OFF"}`;
+      updateRadarOverlays(currentLoc, latestRows[0]);
+    });
 
     function setRvFrame(idx) {
       if (!rvTileLayers.length || !radarMap) return;
@@ -1679,9 +1990,9 @@
       }
     }
 
-    async function initRadar(lat, lon) {
+    async function initRadar(loc) {
       if (!radarMap) {
-        radarMap = L.map("radarMap", { zoomControl: true }).setView([lat, lon], 7);
+        radarMap = L.map("radarMap", { zoomControl: true }).setView([loc.lat, loc.lon], 7);
         L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
           attribution: "&copy; OpenStreetMap contributors",
           maxZoom: 14,
@@ -1715,10 +2026,14 @@
           }
         } catch (e) {}
 
+        radarZipMarker = L.circleMarker([loc.lat, loc.lon], { radius: 6, color: "#38bdf8", fillOpacity: 0.95 }).addTo(radarMap).bindPopup(`${loc.zip} ${loc.name}`);
         L.circleMarker([42.70, -83.47], { radius: 5, color: "#10b981", fillOpacity: 0.85 }).addTo(radarMap).bindPopup("KDTX NEXRAD (White Lake, MI)");
         L.circleMarker([43.37, -81.38], { radius: 5, color: "#f59e0b", fillOpacity: 0.85 }).addTo(radarMap).bindPopup("CASET Radar (Exeter, ON)");
       } else {
-        radarMap.setView([lat, lon], 7);
+        radarMap.setView([loc.lat, loc.lon], 7);
+        if (radarZipMarker) {
+          radarZipMarker.setLatLng([loc.lat, loc.lon]).bindPopup(`${loc.zip} ${loc.name}`);
+        }
       }
       applyRadarMode(activeRadarMode);
     }
@@ -1733,7 +2048,7 @@
       if (mode === "combined") {
         setRvFrame(rvCurrentIdx);
         if (ecccRainWms) ecccRainWms.addTo(radarMap);
-        statusEl.textContent = "Active: US NEXRAD (RainViewer) + Environment Canada 1km Border Composite";
+        statusEl.textContent = "Active: US NEXRAD + Environment Canada 1km + CWOP Pins + 10/25/50 mi Lightning Rings";
       } else if (mode === "eccc_rain") {
         if (ecccRainWms) ecccRainWms.addTo(radarMap);
         statusEl.textContent = "Active: Environment Canada MSC GeoMet 1km Rain Rate (mm/hr)";
@@ -1749,9 +2064,9 @@
       }
     }
 
-    document.querySelectorAll(".r-btn").forEach(btn => {
+    document.querySelectorAll(".r-btn[data-layer]").forEach(btn => {
       btn.addEventListener("click", () => {
-        document.querySelectorAll(".r-btn").forEach(b => b.classList.remove("active"));
+        document.querySelectorAll(".r-btn[data-layer]").forEach(b => b.classList.remove("active"));
         btn.classList.add("active");
         applyRadarMode(btn.dataset.layer);
       });
@@ -1775,26 +2090,27 @@
       }
     });
 
-    // ==================== SAME DAY OF YEAR — HISTORICAL HIGH & LOW ACROSS PAST YEARS ====================
+    // ==================== CURRENT DATE RECORD HIGH & LOW VS. CURRENT OBSERVATION ====================
     async function loadHistorical40YrAnalogs(loc) {
       const hStatus = document.getElementById("histStatus");
       const recBox = document.getElementById("histRecordsBox");
       const tbody = document.getElementById("histRowsBody");
 
       hStatus.className = "status-bar";
-      hStatus.textContent = `Loading same-day-of-year historical highs and lows for ${loc.name} (${loc.zip})...`;
+      hStatus.textContent = `Comparing current date records against current observed temperatures for ${loc.name} (${loc.zip})...`;
 
       try {
         const nowDet = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Detroit" }));
-        const endDate = nowDet.toISOString().slice(0, 10);
-        const targetMonthDay = endDate.slice(5, 10); // MM-DD for same day of year
+        const curDateIso = nowDet.toISOString().slice(0, 10);
+        const curMonthDay = curDateIso.slice(5, 10);
+        const prettyCurDate = nowDet.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
         const prettyMonthDay = nowDet.toLocaleDateString("en-US", { month: "long", day: "numeric" });
 
         const start = new Date(nowDet);
         start.setFullYear(start.getFullYear() - 40);
         const startDate = start.toISOString().slice(0, 10);
 
-        const archUrl = `https://archive-api.open-meteo.com/v1/archive?latitude=${loc.lat}&longitude=${loc.lon}&start_date=${startDate}&end_date=${endDate}&daily=temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&timezone=America/Detroit`;
+        const archUrl = `https://archive-api.open-meteo.com/v1/archive?latitude=${loc.lat}&longitude=${loc.lon}&start_date=${startDate}&end_date=${curDateIso}&daily=temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&timezone=America/Detroit`;
         const res = await fetch(archUrl);
         if (!res.ok) throw new Error(`Historical archive status ${res.status}`);
         const data = await res.json();
@@ -1805,45 +2121,67 @@
 
         let recHigh = -999, recHighDate = "";
         let recLow = 999, recLowDate = "";
-        const doyRows = [];
+        const sameDayHistory = [];
 
         for (let i = 0; i < dates.length; i++) {
-          if (dates[i].slice(5, 10) !== targetMonthDay) continue;
+          if (dates[i].slice(5, 10) !== curMonthDay) continue;
           const hi = highs[i];
           const lo = lows[i];
           if (hi != null && hi > recHigh) { recHigh = hi; recHighDate = dates[i]; }
           if (lo != null && lo < recLow) { recLow = lo; recLowDate = dates[i]; }
-          doyRows.push({ date: dates[i], hi, lo });
+          sameDayHistory.push({ date: dates[i], hi, lo });
         }
+
+        const curForecastRows = (latestRows || []).filter(r => r.ts.slice(0, 10) === curDateIso);
+        const curObsHigh = curForecastRows.length
+          ? Math.max(...curForecastRows.map(r => r.wtd))
+          : (highs[highs.length - 1] ?? null);
+        const curObsLow = curForecastRows.length
+          ? Math.min(...curForecastRows.map(r => r.wtd))
+          : (lows[lows.length - 1] ?? null);
+
+        const highDiffFromObs = (recHigh > -900 && curObsHigh != null) ? (recHigh - curObsHigh) : null;
+        const lowDiffFromObs = (recLow < 900 && curObsLow != null) ? (curObsLow - recLow) : null;
 
         recBox.innerHTML = `
           <div class="rec-card">
             <div class="k">${prettyMonthDay} Record High</div>
             <div class="v" style="color:var(--warn);">${recHigh > -900 ? recHigh.toFixed(1) + "°F" : "—"}</div>
-            <div class="d">${recHighDate || "Same day of year"}</div>
+            <div class="d">Recorded ${recHighDate || "—"} · ${highDiffFromObs != null ? (highDiffFromObs >= 0 ? "+" : "") + highDiffFromObs.toFixed(1) + "°F vs. current obs high" : ""}</div>
           </div>
           <div class="rec-card">
             <div class="k">${prettyMonthDay} Record Low</div>
             <div class="v" style="color:var(--accent);">${recLow < 900 ? recLow.toFixed(1) + "°F" : "—"}</div>
-            <div class="d">${recLowDate || "Same day of year"}</div>
+            <div class="d">Recorded ${recLowDate || "—"} · ${lowDiffFromObs != null ? (lowDiffFromObs >= 0 ? "+" : "") + lowDiffFromObs.toFixed(1) + "°F vs. current obs low" : ""}</div>
+          </div>
+          <div class="rec-card">
+            <div class="k">Current Date Observation (${prettyCurDate})</div>
+            <div class="v">${curObsHigh != null ? curObsHigh.toFixed(1) + "°F" : "—"} / ${curObsLow != null ? curObsLow.toFixed(1) + "°F" : "—"}</div>
+            <div class="d">Current date high &amp; low for ${loc.name} (${loc.zip})</div>
           </div>
         `;
 
-        doyRows.sort((a, b) => b.date.localeCompare(a.date));
-        tbody.innerHTML = doyRows.map(r => `<tr>
-          <td><strong>${r.date}</strong></td>
-          <td>${r.hi != null ? r.hi.toFixed(1) + "°F" : "—"}</td>
-          <td>${r.lo != null ? r.lo.toFixed(1) + "°F" : "—"}</td>
-        </tr>`).join("");
+        sameDayHistory.sort((a, b) => b.date.localeCompare(a.date));
+        tbody.innerHTML = sameDayHistory.map(r => {
+          const vsHi = (r.hi != null && curObsHigh != null) ? ((r.hi - curObsHigh >= 0 ? "+" : "") + (r.hi - curObsHigh).toFixed(1) + "°F") : "—";
+          const vsLo = (r.lo != null && curObsLow != null) ? ((r.lo - curObsLow >= 0 ? "+" : "") + (r.lo - curObsLow).toFixed(1) + "°F") : "—";
+          return `<tr>
+            <td><strong>${r.date}</strong></td>
+            <td>${r.hi != null ? r.hi.toFixed(1) + "°F" : "—"}</td>
+            <td>${r.lo != null ? r.lo.toFixed(1) + "°F" : "—"}</td>
+            <td>${vsHi}</td>
+            <td>${vsLo}</td>
+          </tr>`;
+        }).join("");
 
-        hStatus.textContent = `Showing ${doyRows.length} past years for ${prettyMonthDay} (${targetMonthDay}) in ${loc.name} (${loc.zip}).`;
+        hStatus.textContent = `Current Date (${prettyCurDate}) Record High (${recHigh.toFixed(1)}°F) & Record Low (${recLow.toFixed(1)}°F) vs. Current Observation (${curObsHigh != null ? curObsHigh.toFixed(1) + "°F" : "—"}/${curObsLow != null ? curObsLow.toFixed(1) + "°F" : "—"}) for ${loc.name} (${loc.zip}).`;
       } catch (err) {
         hStatus.className = "status-bar error";
-        hStatus.textContent = "Historical archive notice: " + err.message;
+        hStatus.textContent = "Current date record comparison notice: " + err.message;
       }
     }
 
-    // ==================== PINNED ZIPS & ZIP LOOKUP ====================
+    // ==================== PINNED ZIPS & MAIN FORECAST ====================
     function renderFavZips() {
       const bar = document.getElementById("favZipsBar");
       let favs = [];
@@ -1852,7 +2190,7 @@
         favs = [
           { zip: "48049", label: "48049 Ruby" },
           { zip: "48060", label: "48060 Port Huron" },
-          { zip: "48341", label: "48341 Pontiac" },
+          { zip: "48032", label: "48032 Jeddo" },
           { zip: "73069", label: "73069 Norman OK" }
         ];
         localStorage.setItem("bw_fav_zips", JSON.stringify(favs));
@@ -1912,14 +2250,14 @@
       const fullParams = new URLSearchParams({
         ...common,
         models: Object.values(MODELS).join(","),
-        hourly: "temperature_2m,dew_point_2m,cloud_cover,apparent_temperature,precipitation_probability,precipitation,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m,temperature_850hPa"
+        hourly: "temperature_2m,dew_point_2m,cloud_cover,apparent_temperature,precipitation_probability,precipitation,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m,temperature_850hPa,cape,lifted_index"
       });
       let res = await fetch(`https://api.open-meteo.com/v1/forecast?${fullParams}`);
       if (res.ok) return await res.json();
 
       const bestParams = new URLSearchParams({
         ...common,
-        hourly: "temperature_2m,dew_point_2m,cloud_cover,apparent_temperature,precipitation_probability,precipitation,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m,temperature_850hPa"
+        hourly: "temperature_2m,dew_point_2m,cloud_cover,apparent_temperature,precipitation_probability,precipitation,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m,temperature_850hPa,cape,lifted_index"
       });
       res = await fetch(`https://api.open-meteo.com/v1/forecast?${bestParams}`);
       if (!res.ok) throw new Error(`Weather API unavailable (${res.status}).`);
@@ -1927,21 +2265,21 @@
     }
 
     async function runForecast() {
+      const statusText = document.getElementById("statusText");
       const statusBar = document.getElementById("statusBar");
       const zip = document.getElementById("zipInput").value.trim() || "48049";
       const days = parseInt(document.getElementById("daysSelect").value, 10) || 5;
 
       statusBar.className = "status-bar";
-      statusBar.textContent = `Updating ZIP ${zip} ensemble, commute corridor, bridge lag, CWOP stations & 40-year archive...`;
+      statusText.textContent = `Updating ZIP ${zip} ensemble, lightning CAPE, closest CWOP pins & graphs...`;
+      updateCacheBadge(false);
 
       try {
         const loc = await lookupLocalZip(zip);
         currentLoc = loc;
         localStorage.setItem("bw_last_zip", zip);
 
-        document.getElementById("commuteOrig").value = zip;
-        initRadar(loc.lat, loc.lon);
-        loadNwsAlerts(loc.lat, loc.lon);
+        await initRadar(loc);
         loadNearbyCwopStations(loc);
         runCommuteCorridor();
         loadHistorical40YrAnalogs(loc);
@@ -2018,6 +2356,8 @@
           const wdir = pickVal("wind_direction_10m", ["RRFS","NBM","ECMWF","GFS"], i) ?? 0;
           const wgst = pickVal("wind_gusts_10m", ["RRFS","NBM","ECMWF","GFS"], i) ?? 0;
           const t850 = pickVal("temperature_850hPa", ["ECMWF","GFS","GEM"], i);
+          const cape = pickVal("cape", ["RRFS","ECMWF","GFS","GEM"], i);
+          const liftedIdx = pickVal("lifted_index", ["GFS","ECMWF","GEM"], i);
 
           const dNorm = ((wdir % 360) + 360) % 360;
           const fetchActive = (dNorm >= 330 || dNorm <= 70) && wspd >= 10;
@@ -2035,6 +2375,7 @@
           const hr = parseInt(ts.slice(11, 13), 10);
           rows.push({
             ts, lead, wtd, dew, cloudCover, cloudBaseFt, simDbz, spread, feelsLike, pop, wcode, precipIn,
+            cape, liftedIdx,
             isNight: hr < 7 || hr >= 18, temps, loModel: lo[0], loVal: lo[1], hiModel: hi[0], hiVal: hi[1],
             wspd, wdir: Math.round(dNorm), wgst, fetchActive, fetchSector: fetchActive ? degToCardinal(dNorm) : "-", dtC, lesRisk
           });
@@ -2042,12 +2383,25 @@
 
         if (!rows.length) throw new Error("No hourly data returned. Tap Update All to retry.");
         latestRows = rows;
+
+        // Cache snapshot for offline fallback
+        try { localStorage.setItem(`bw_cache_${zip}`, JSON.stringify({ loc, rows })); } catch (e) {}
+
+        const scrubber = document.getElementById("timeScrubber");
+        scrubber.max = String(Math.min(47, rows.length - 1));
+        scrubber.value = "0";
+        updateTimeScrubber(0);
+
         drawForecastGraphs(rows);
         attachInteractiveChartScrub(rows);
 
         const cur = rows[0];
+        loadNwsAlerts(loc.lat, loc.lon, cur);
+        updateRadarOverlays(loc, cur);
+
         const cat = flightCategory(cur.cloudBaseFt);
         const lag = evaluatePavementLag(cur.wtd, cur.dew, cur.cloudCover, cur.wspd, cur.precipIn);
+        const ltg = evaluateLightningRisk(cur.cape, cur.liftedIdx, cur.wcode, cur.simDbz);
         const todaySun = computeSunTimes(cur.ts.slice(0, 10), loc.lat, loc.lon, -5);
         const todayMoon = computeMoonPhase(cur.ts.slice(0, 10));
 
@@ -2061,6 +2415,11 @@
             </div>
           </div>
           <div class="hero-pills">
+            <div class="pill">
+              <span>Lightning &amp; CAPE</span>
+              <strong class="${ltg.cls}">${ltg.level}</strong>
+              <small>${ltg.badge}</small>
+            </div>
             <div class="pill">
               <span>Cloud Base (LCL)</span>
               <strong>~${cur.cloudBaseFt ? cur.cloudBaseFt.toLocaleString() + " ft" : "—"}</strong>
@@ -2096,28 +2455,24 @@
               <strong>${cur.fetchActive ? cur.fetchSector + " Onshore" : "Offshore / Light"}</strong>
               <small>${cur.dtC != null ? "Lake ΔT: " + cur.dtC.toFixed(1) + "°C" : "SST contrast"}</small>
             </div>
-            <div class="pill">
-              <span>Model Spread</span>
-              <strong>${cur.spread.toFixed(1)}°F gap</strong>
-              <small>${cur.loModel} ${cur.loVal.toFixed(0)}° to ${cur.hiModel} ${cur.hiVal.toFixed(0)}°</small>
-            </div>
           </div>
         `;
 
         const stRows = rows.slice(0, 48);
         const stMin = Math.min(...stRows.map(r => r.wtd)), stMax = Math.max(...stRows.map(r => r.wtd));
         const stMaxPop = Math.max(...stRows.map(r => r.pop ?? 0));
+        const maxCape48 = Math.max(...stRows.map(r => r.cape ?? 0));
         const avgCloud = Math.round(stRows.reduce((a, r) => a + r.cloudCover, 0) / stRows.length);
 
         document.getElementById("briefingsBox").innerHTML = `
           <div class="brief-card">
             <span class="brief-badge">Short-Term Briefing (48 Hours)</span>
-            <p>In <strong>${loc.name} (${loc.zip})</strong>, temperatures span <strong>${Math.round(stMin)}°F to ${Math.round(stMax)}°F</strong>, average cloud cover is <strong>${avgCloud}%</strong>, and precipitation probability peaks near <strong>${stMaxPop}%</strong>.</p>
+            <p>In <strong>${loc.name} (${loc.zip})</strong>, temperatures span <strong>${Math.round(stMin)}°F to ${Math.round(stMax)}°F</strong>, average cloud cover is <strong>${avgCloud}%</strong>, peak precip odds hit <strong>${stMaxPop}%</strong>, and peak convective CAPE is <strong>${Math.round(maxCape48)} J/kg</strong>.</p>
             <div class="model-note"><strong>Pavement &amp; Bridge Lag:</strong> ${lag.detail}.</div>
           </div>
           <div class="brief-card">
-            <span class="brief-badge">Border Radar &amp; Lake Huron Note</span>
-            <p>Combined US NEXRAD + Environment Canada 1 km radar covers ${loc.zip} and southern Ontario. Peak Lake Huron water-to-850hPa ΔT reaches <strong>${Math.max(...rows.map(r => r.dtC ?? -99)).toFixed(1)}°C</strong>.</p>
+            <span class="brief-badge">Border Radar, Lightning &amp; Lake Huron Note</span>
+            <p>Combined US NEXRAD + Environment Canada 1 km radar covers ${loc.zip} and southern Ontario with 10/25/50-mile lightning safety rings. Peak Lake Huron ΔT reaches <strong>${Math.max(...rows.map(r => r.dtC ?? -99)).toFixed(1)}°C</strong>.</p>
             <div class="model-note"><strong>Sky Window:</strong> Sunset ${todaySun.sunset} · Moonrise ${todayMoon.moonrise} · Moonset ${todayMoon.moonset}.</div>
           </div>
         `;
@@ -2140,14 +2495,12 @@
           byDay.get(k).push(r);
         });
         let dIdx = 0;
-        latestDailySunMoon = [];
         document.getElementById("dailyStrip").innerHTML = Array.from(byDay.entries()).map(([dayKey, dRows]) => {
           const hiT = Math.round(Math.max(...dRows.map(r => r.wtd)));
           const loT = Math.round(Math.min(...dRows.map(r => r.wtd)));
           const mid = dRows[Math.floor(dRows.length / 2)];
           const sun = computeSunTimes(dayKey, loc.lat, loc.lon, -5);
           const moon = computeMoonPhase(dayKey);
-          latestDailySunMoon.push({ dayKey, sun, moon });
           const label = dIdx === 0 ? "Today" : dIdx === 1 ? "Tomorrow" : new Date(dayKey + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
           dIdx++;
           return `<div class="day-card">
@@ -2162,6 +2515,7 @@
 
         document.getElementById("rowsBody").innerHTML = rows.filter((_, i) => i % 3 === 0).map(r => {
           const dbzTxt = r.simDbz > 0 ? `~${r.simDbz} dBZ` : "Clear";
+          const ltg = evaluateLightningRisk(r.cape, r.liftedIdx, r.wcode, r.simDbz);
           const lesTxt = r.lesRisk === "HIGH_LES" ? "High LES" : r.lesRisk === "MOD_LES" ? "Mod LES" : r.fetchActive ? `${r.fetchSector} Fetch` : "Quiet";
           return `<tr>
             <td>${r.ts.replace("T", " ").slice(5, 16)}</td>
@@ -2169,6 +2523,7 @@
             <td><strong>${r.wtd.toFixed(1)}°F</strong></td>
             <td>${Math.round(r.cloudCover)}%</td>
             <td>${r.cloudBaseFt ? r.cloudBaseFt.toLocaleString() + " ft" : "—"}</td>
+            <td class="${ltg.cls}">${ltg.level} (${r.cape != null ? Math.round(r.cape) : 0})</td>
             <td>${dbzTxt}</td>
             <td>${r.pop != null ? r.pop + "%" : "—"}</td>
             <td>${degToCardinal(r.wdir)} ${Math.round(r.wspd)} (G ${Math.round(r.wgst)})</td>
@@ -2176,14 +2531,57 @@
           </tr>`;
         }).join("");
 
-        statusBar.textContent = `Live for ${loc.name} (${loc.zip}) · ${Object.keys(cur.temps).length} Active Models · Commute Corridor, Bridge Lag, Marine & 40-Yr Archive Ready`;
+        statusText.textContent = `Live for ${loc.name} (${loc.zip}) · ${Object.keys(cur.temps).length} Active Models · Sun/Moon ${todaySun.sunrise}/${todaySun.sunset}`;
       } catch (err) {
+        updateCacheBadge(true);
         statusBar.className = "status-bar error";
-        statusBar.textContent = err.message || "Error loading weather data.";
+        statusText.textContent = err.message || "Error loading weather data.";
       }
     }
 
+    // ==================== VOICE BRIEFING & CSV / JSON EXPORTS ====================
+    document.getElementById("voiceBtn").addEventListener("click", () => {
+      if (!("speechSynthesis" in window) || !latestRows.length) return;
+      window.speechSynthesis.cancel();
+      const cur = latestRows[0];
+      const ltg = evaluateLightningRisk(cur.cape, cur.liftedIdx, cur.wcode, cur.simDbz);
+      const text = `Weather briefing for ${currentLoc.name}, ZIP ${currentLoc.zip}. Currently ${Math.round(cur.wtd)} degrees and ${weatherLabel(cur.wcode)}. Wind ${degToCardinal(cur.wdir)} at ${Math.round(cur.wspd)} miles per hour, gusting to ${Math.round(cur.wgst)}. Cloud cover ${Math.round(cur.cloudCover)} percent, cloud base around ${cur.cloudBaseFt || 3000} feet. Lightning risk is ${ltg.level}.`;
+      const utter = new SpeechSynthesisUtterance(text);
+      window.speechSynthesis.speak(utter);
+    });
+
+    function triggerDownload(filename, content, mime) {
+      const blob = new Blob([content], { type: mime });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    document.getElementById("exportCsvBtn").addEventListener("click", () => {
+      if (!latestRows.length) return;
+      const header = "timestamp,zip,temp_f,feels_like_f,dewpoint_f,cloud_cover_pct,cloud_base_ft,cape_jkg,sim_dbz,precip_prob_pct,wind_dir,wind_mph,gust_mph\n";
+      const lines = latestRows.map(r =>
+        `${r.ts},${currentLoc.zip},${r.wtd.toFixed(1)},${r.feelsLike.toFixed(1)},${r.dew ?? ""},${Math.round(r.cloudCover)},${r.cloudBaseFt ?? ""},${r.cape ?? ""},${r.simDbz},${r.pop ?? ""},${r.wdir},${Math.round(r.wspd)},${Math.round(r.wgst)}`
+      ).join("\n");
+      triggerDownload(`forecast_${currentLoc.zip}.csv`, header + lines, "text/csv");
+    });
+
+    document.getElementById("exportJsonBtn").addEventListener("click", () => {
+      if (!latestRows.length) return;
+      triggerDownload(`forecast_${currentLoc.zip}.json`, JSON.stringify({ location: currentLoc, hourly: latestRows }, null, 2), "application/json");
+    });
+
     // ==================== ALL NORTH AMERICA AIRPORTS + FLIGHT SIMULATOR ====================
+    document.getElementById("aircraftPreset").addEventListener("change", e => {
+      document.getElementById("tasInput").value = e.target.value;
+      runFlightSim();
+    });
+
     function populateAirportDropdowns(filterText = "") {
       const q = filterText.trim().toLowerCase();
       const filtered = q
@@ -2228,10 +2626,11 @@
         const existingCodes = new Set(NA_AIRPORTS.map(a => a.code));
         const extra = [];
 
-        for (let i = 1; i < lines.length && extra.length < 450; i++) {
-          const cols = lines[i].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
-          if (!cols || cols.length < 14) continue;
-          const clean = s => s.replace(/^"|"$/g, "").trim();
+        for (let i = 1; i < lines.length && extra.length < 600; i++) {
+          if (!lines[i].trim()) continue;
+          const cols = parseCsvLine(lines[i]);
+          if (cols.length < 14) continue;
+          const clean = s => (s || "").trim();
           const type = clean(cols[2]);
           if (type !== "large_airport" && type !== "medium_airport") continue;
           const isoCountry = clean(cols[8]);
@@ -2387,6 +2786,7 @@
       const [lat2, lon2, c2] = document.getElementById("destSelect").value.split(",");
       const level = document.getElementById("altSelect").value;
       const tas = parseFloat(document.getElementById("tasInput").value) || 530;
+      const taxiMins = parseFloat(document.getElementById("taxiBufferInput").value) || 0;
       const dtVal = document.getElementById("flightDate").value;
 
       const orig = { lat: +lat1, lon: +lon1, code: c1 };
@@ -2436,8 +2836,8 @@
           }
           const avgComp = count ? sumComp / count : 0;
           const gs = Math.max(220, tas + avgComp);
-          const stillMins = (route.dist / tas) * 60;
-          const actualMins = (route.dist / gs) * 60;
+          const stillMins = (route.dist / tas) * 60 + taxiMins;
+          const actualMins = (route.dist / gs) * 60 + taxiMins;
           return {
             avgSpd: count ? sumSpd / count : 65,
             avgDir: count ? Math.round(sumDir / count) : 270,
@@ -2464,6 +2864,7 @@
         drawNorthAmericaJetMap(windGrid, orig, dest, curFlight.windComp);
 
         const isTail = curFlight.windComp >= 0;
+        const catRisk = curFlight.avgSpd >= 115 ? "Moderate–Strong Jet Shear Risk" : curFlight.avgSpd >= 85 ? "Light–Moderate Jet Chop Possible" : "Smooth Cruise Profile";
         document.getElementById("flightCards").innerHTML = `
           <div class="f-card">
             <div class="k">Airspeed vs. Ground Speed</div>
@@ -2473,12 +2874,12 @@
           <div class="f-card">
             <div class="k">3-Waypoint Jet Component (${level})</div>
             <div class="v" style="color:${isTail ? "var(--ok)" : "var(--warn)"};">${isTail ? "+" : ""}${Math.round(curFlight.windComp)} mph ${isTail ? "Tailwind" : "Headwind"}</div>
-            <div class="d">Mean route upper wind: ${Math.round(curFlight.avgSpd)} mph from ${curFlight.avgDir}°</div>
+            <div class="d">Mean route jet: ${Math.round(curFlight.avgSpd)} mph from ${curFlight.avgDir}° · ${catRisk}</div>
           </div>
           <div class="f-card">
-            <div class="k">Cruise Duration &amp; Arrival Delta</div>
+            <div class="k">Gate-to-Gate Duration &amp; Delta</div>
             <div class="v" style="color:${curFlight.diffMins <= 0 ? "var(--ok)" : "var(--warn)"};">${curFlight.diffMins <= 0 ? Math.abs(curFlight.diffMins) + " min Faster" : curFlight.diffMins + " min Slower"}</div>
-            <div class="d">Still-air: <strong>${fmtDur(curFlight.stillMins)}</strong> · With wind: <strong>${fmtDur(curFlight.actualMins)}</strong></div>
+            <div class="d">Still-air (+${taxiMins}m buf): <strong>${fmtDur(curFlight.stillMins)}</strong> · With wind: <strong>${fmtDur(curFlight.actualMins)}</strong></div>
           </div>
         `;
 
@@ -2502,10 +2903,12 @@
 
         const depHourStr = times[idx].slice(11, 16);
         const dailyRowsHtml = [];
+        latestFlightDaily = [];
         for (let h = idx % 24; h < times.length; h += 24) {
           const dSim = computeRouteAtHour(h);
           const dDate = dSim.ts.slice(0, 10);
           const tail = dSim.windComp >= 0;
+          latestFlightDaily.push({ date: dDate, orig: c1, dest: c2, level, tas, groundSpeed: Math.round(dSim.groundSpeed), windComp: Math.round(dSim.windComp), mins: Math.round(dSim.actualMins), deltaMins: dSim.diffMins });
           dailyRowsHtml.push(`<tr>
             <td><strong>${dDate}</strong> (${depHourStr})</td>
             <td>${Math.round(dSim.avgSpd)} mph from ${dSim.avgDir}°</td>
@@ -2524,8 +2927,8 @@
         const dirTo = toRad((sample.dirFrom + 180) % 360);
         const windComp = sample.spd * Math.cos(dirTo - toRad(route.bearing));
         const gs = Math.max(220, tas + windComp);
-        const stillMins = (route.dist / tas) * 60;
-        const actualMins = (route.dist / gs) * 60;
+        const stillMins = (route.dist / tas) * 60 + taxiMins;
+        const actualMins = (route.dist / gs) * 60 + taxiMins;
         const diffMins = Math.round(actualMins - stillMins);
         const isTail = windComp >= 0;
 
@@ -2543,7 +2946,7 @@
             <div class="d">Corridor jet flow: ~${sample.spd} mph from ${sample.dirFrom}°</div>
           </div>
           <div class="f-card">
-            <div class="k">Cruise Duration &amp; Arrival Delta</div>
+            <div class="k">Gate-to-Gate Duration &amp; Delta</div>
             <div class="v" style="color:${diffMins <= 0 ? "var(--ok)" : "var(--warn)"};">${diffMins <= 0 ? Math.abs(diffMins) + " min Faster" : diffMins + " min Slower"}</div>
             <div class="d">Still-air: <strong>${fmtDur(stillMins)}</strong> · With wind: <strong>${fmtDur(actualMins)}</strong></div>
           </div>
@@ -2551,6 +2954,13 @@
         fStatus.textContent = `Showing schematic ${level} North America jet corridor (${err.message}).`;
       }
     }
+
+    document.getElementById("exportFlightCsvBtn").addEventListener("click", () => {
+      if (!latestFlightDaily.length) return;
+      const header = "date,orig,dest,cruise_level,tas_mph,ground_speed_mph,wind_comp_mph,duration_mins,delta_mins\n";
+      const lines = latestFlightDaily.map(r => `${r.date},${r.orig},${r.dest},${r.level},${r.tas},${r.groundSpeed},${r.windComp},${r.mins},${r.deltaMins}`).join("\n");
+      triggerDownload(`flight_${latestFlightDaily[0].orig}_${latestFlightDaily[0].dest}.csv`, header + lines, "text/csv");
+    });
 
     document.getElementById("jetCanvas").addEventListener("click", e => {
       const canvas = e.currentTarget;
@@ -2579,7 +2989,6 @@
       }
     });
 
-    // Event Listeners & Startup
     document.getElementById("goBtn").addEventListener("click", runForecast);
     document.getElementById("zipInput").addEventListener("keydown", e => { if (e.key === "Enter") runForecast(); });
     document.getElementById("daysSelect").addEventListener("change", runForecast);

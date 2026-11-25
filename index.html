@@ -243,6 +243,26 @@
     .day-audio-wrap { margin-top: 6px; }
     .day-audio-wrap .audio-link-btn { margin-left: 0; font-size: 0.69rem; min-height: 24px; padding: 1px 8px; }
 
+
+    .voice-layer-bar {
+      display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center;
+      gap: 10px; background: var(--panel); border: 1px solid var(--border);
+      border-radius: 12px; padding: 8px 14px; margin-bottom: 12px; font-size: 0.82rem;
+    }
+    .voice-layer-left { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+    .voice-switch-wrap {
+      display: inline-flex; align-items: center; gap: 8px; cursor: pointer;
+      min-height: 36px; padding: 2px 10px; border-radius: 999px;
+      background: var(--panel-soft); border: 1px solid var(--border-strong);
+      font-weight: 700; color: #e2edf8; user-select: none;
+    }
+    .voice-switch-wrap input[type="checkbox"] {
+      width: 18px; height: 18px; min-height: 18px; accent-color: var(--ok); cursor: pointer; margin: 0;
+    }
+    .voice-layer-btn {
+      min-height: 36px; padding: 4px 12px; font-size: 0.78rem; border-radius: 8px;
+    }
+
     /* Micro-climate Strip */
     .micro-strip {
       display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
@@ -458,13 +478,27 @@
       <button class="primary" id="goBtn">Update Local</button>
       <button class="secondary" id="gpsBtn" title="Auto-detect current GPS location">Auto-GPS</button>
       <button class="secondary" id="saveZipBtn" title="Pin current ZIP">+ Pin ZIP</button>
-      <button class="secondary" id="autoVoiceToggleBtn" title="Toggle automatic voice-over on forecast updates">Auto Voice: ON</button>
-      <button class="secondary" id="stopVoiceBtn" title="Stop current speech">Stop Audio</button>
       <button class="secondary" id="exportCsvBtn" title="Export CSV">CSV</button>
       <button class="secondary" id="exportJsonBtn" title="Export JSON">JSON</button>
       <button class="secondary" id="shareBtn">Share / App</button>
     </div>
     <div class="fav-zips" id="favZipsBar"></div>
+
+      <div class="voice-layer-bar" id="voiceLayerBar" aria-label="Voice Over Layer Controls">
+        <div class="voice-layer-left">
+          <strong style="color:var(--accent); font-size:0.78rem; text-transform:uppercase; letter-spacing:0.05em;">Voice Layer</strong>
+          <label class="voice-switch-wrap" for="autoVoiceCheckbox">
+            <input type="checkbox" id="autoVoiceCheckbox" checked />
+            <span id="autoVoiceStatusLabel">Auto Voice-Over: ON</span>
+          </label>
+          <span id="voiceUnlockHint" style="color:var(--muted); font-size:0.76rem;">Enabled by default on load &amp; updates; uncheck anytime to turn off</span>
+        </div>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <button type="button" class="secondary voice-layer-btn" id="readNowBtn">Read Current</button>
+          <button type="button" class="secondary voice-layer-btn" id="stopVoiceBtn">Stop Audio</button>
+        </div>
+      </div>
+
 
     <div class="status-bar" id="statusBar">
       <span id="statusText">Requesting location permission for automatic local weather &amp; nearby destinations...</span>
@@ -2171,13 +2205,17 @@
 
     // ==================== AUTO VOICE-OVER & PER-FORECAST AUDIO LINKS ====================
     let autoVoiceEnabled = localStorage.getItem("bw_auto_voice") !== "off";
+    let pendingAutoSpeech = "";
+    let hasUserInteracted = false;
 
-    function syncAutoVoiceButton() {
-      const btn = document.getElementById("autoVoiceToggleBtn");
-      if (!btn) return;
-      btn.textContent = autoVoiceEnabled ? "Auto Voice: ON" : "Auto Voice: OFF";
-      btn.style.borderColor = autoVoiceEnabled ? "var(--accent)" : "var(--border)";
-      btn.style.color = autoVoiceEnabled ? "#7dd3fc" : "var(--muted)";
+    function syncAutoVoiceUI() {
+      const cb = document.getElementById("autoVoiceCheckbox");
+      const lbl = document.getElementById("autoVoiceStatusLabel");
+      if (cb) cb.checked = autoVoiceEnabled;
+      if (lbl) {
+        lbl.textContent = autoVoiceEnabled ? "Auto Voice-Over: ON" : "Auto Voice-Over: OFF";
+        lbl.style.color = autoVoiceEnabled ? "#34d399" : "var(--muted)";
+      }
     }
 
     let activeAudioBtn = null;
@@ -2208,34 +2246,67 @@
           triggerBtn.textContent = "⏹ Stop";
           activeAudioBtn = triggerBtn;
         }
-        utter.onend = clearSpeakingState;
-        utter.onerror = clearSpeakingState;
+        utter.onend = () => {
+          pendingAutoSpeech = "";
+          clearSpeakingState();
+        };
+        utter.onerror = () => {
+          clearSpeakingState();
+        };
         window.speechSynthesis.speak(utter);
+
+        if (!hasUserInteracted && !force) {
+          pendingAutoSpeech = text;
+        } else {
+          pendingAutoSpeech = "";
+        }
       } catch (e) {}
     }
 
-    // Universal delegated handler for all inline audio description links across every tab
+    ["pointerdown", "keydown", "touchstart"].forEach(evtName => {
+      window.addEventListener(evtName, () => {
+        hasUserInteracted = true;
+        if (pendingAutoSpeech && autoVoiceEnabled && "speechSynthesis" in window && !window.speechSynthesis.speaking) {
+          const queued = pendingAutoSpeech;
+          pendingAutoSpeech = "";
+          speakForecastText(queued, true);
+        }
+      }, { passive: true });
+    });
+
     document.addEventListener("click", e => {
       const linkBtn = e.target.closest("[data-audio-desc]");
       if (!linkBtn) return;
       e.preventDefault();
       e.stopPropagation();
+      hasUserInteracted = true;
       const spoken = decodeURIComponent(linkBtn.getAttribute("data-audio-desc") || "");
       speakForecastText(spoken, true, linkBtn);
     });
 
-    document.getElementById("autoVoiceToggleBtn").addEventListener("click", () => {
-      autoVoiceEnabled = !autoVoiceEnabled;
+    document.getElementById("autoVoiceCheckbox").addEventListener("change", e => {
+      hasUserInteracted = true;
+      autoVoiceEnabled = !!e.target.checked;
       localStorage.setItem("bw_auto_voice", autoVoiceEnabled ? "on" : "off");
-      syncAutoVoiceButton();
-      if (!autoVoiceEnabled && "speechSynthesis" in window) {
-        window.speechSynthesis.cancel();
-      } else if (autoVoiceEnabled && latestRows.length) {
+      syncAutoVoiceUI();
+      if (!autoVoiceEnabled) {
+        pendingAutoSpeech = "";
+        if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+        clearSpeakingState();
+      } else if (latestRows.length) {
+        speakForecastText(buildCurrentOverviewSpeech(currentLoc, latestRows[0]), true);
+      }
+    });
+
+    document.getElementById("readNowBtn").addEventListener("click", () => {
+      hasUserInteracted = true;
+      if (latestRows.length) {
         speakForecastText(buildCurrentOverviewSpeech(currentLoc, latestRows[0]), true);
       }
     });
 
     document.getElementById("stopVoiceBtn").addEventListener("click", () => {
+      pendingAutoSpeech = "";
       if ("speechSynthesis" in window) window.speechSynthesis.cancel();
       clearSpeakingState();
     });
@@ -2291,7 +2362,7 @@
     now.setMinutes(0, 0, 0);
     document.getElementById("flightDate").value = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 
-    syncAutoVoiceButton();
+    syncAutoVoiceUI();
     renderFavZips();
     populateAirportDropdowns();
     renderSavedSupportNotes();

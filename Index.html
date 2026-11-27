@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#07111d">
+<meta name="description" content="Blue Water Living Weather Command — hyper-local weather dashboard for the Blue Water & Lake Huron corridor.">
+<title>Blue Water Living Weather Command</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+<style>
+:root{--bg:#07111d;--panel:#0d1b2a;--panel2:#102337;--line:#20364c;--text:#e7f0f8;--muted:#8fa8bd;--accent:#48b8ff;--good:#62d68a;--warn:#ffd166;--bad:#ff6b6b}
+*{box-sizing:border-box}html,body{margin:0;background:radial-gradient(circle at top,#10273a 0,#07111d 45%,#050b12 100%);color:var(--text);font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+button,input,select{font:inherit}button{cursor:pointer}a{color:var(--accent)}.wrap{max-width:1500px;margin:auto;padding:14px}
+header{display:flex;gap:14px;align-items:center;justify-content:space-between;padding:12px 4px 16px;flex-wrap:wrap}
+.brand h1{font-size:clamp(22px,4vw,36px);margin:0}.brand p{margin:3px 0;color:var(--muted)}
+.status{display:flex;gap:8px;align-items:center;color:var(--muted);font-size:12px}.dot{width:9px;height:9px;border-radius:50%;background:var(--warn);box-shadow:0 0 12px currentColor}.dot.live{background:var(--good)}.dot.errdot{background:var(--bad)}
+nav{display:flex;gap:6px;overflow:auto;padding:4px 0 12px;position:sticky;top:0;z-index:20;background:#07111df2;backdrop-filter:blur(8px)}
+nav button,.btn{border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:9px;padding:9px 12px;white-space:nowrap;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+nav button.active,.btn.primary{background:#123650;border-color:#286b98}
+main{display:grid;gap:12px}.tab{display:none}.tab.active{display:block}.grid{display:grid;gap:12px}.g2{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}.g3{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+.card{background:linear-gradient(145deg,#0d1b2a,#091622);border:1px solid var(--line);border-radius:14px;padding:14px;box-shadow:0 10px 30px #0005;margin-bottom:12px}.card h2,.card h3{margin:0 0 10px}.muted{color:var(--muted)}.small{font-size:12px}
+.controls{display:flex;gap:7px;flex-wrap:wrap;align-items:center}.controls input,.controls select{background:#081521;color:var(--text);border:1px solid var(--line);border-radius:8px;padding:9px}
+.hero{display:grid;grid-template-columns:1.2fr .8fr;gap:12px}.temp{font-size:clamp(48px,9vw,84px);font-weight:700;line-height:1}.condition{font-size:18px;margin:4px 0}
+table{width:100%;border-collapse:collapse;min-width:820px}th,td{padding:8px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}th{color:#a9c2d6;background:#0a1724;position:sticky;top:0}.tablewrap{overflow:auto;border:1px solid var(--line);border-radius:10px}
+.dayrow{display:grid;grid-template-columns:90px 1fr 60px 60px 95px;gap:8px;align-items:center;padding:9px 6px;border-bottom:1px solid var(--line)}.bar{height:7px;background:#193247;border-radius:10px;overflow:hidden;margin-top:4px}.bar i{display:block;height:100%;background:var(--accent)}
+#map{height:520px;border-radius:12px;overflow:hidden;border:1px solid var(--line)}.leaflet-container{background:#07111d}.mapnote{margin-top:8px}
+.kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}.kpi>div{background:#0a1724;border:1px solid var(--line);border-radius:10px;padding:10px}
+.alert-box{border-radius:12px;padding:12px 14px;margin-bottom:12px;border:1px solid var(--line);background:#0a1c2e}
+.alert-box.warn{border-color:#d97706;background:#2b1a07}.alert-box.bad{border-color:#dc2626;background:#2b0b0e}.alert-box.okbox{border-color:#1e4d35;background:#092117}
+.alert-box details{margin-top:6px}.alert-box summary{cursor:pointer;font-weight:600}
+.log{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}.log button{padding:11px;justify-content:center}.report{display:flex;gap:8px;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);padding:8px 0}
+.badge{display:inline-block;padding:2px 7px;border-radius:999px;font-size:11px;font-weight:600;border:1px solid var(--line);background:#102337}
+.badge.onshore{border-color:#286b98;color:#7fd0ff}.badge.offshore{border-color:#3a5268;color:#a9c2d6}
+footer{color:var(--muted);font-size:11px;padding:16px 3px}.err{color:#ff9b9b}.ok{color:#8de3a6}.warn-txt{color:var(--warn)}
+@media(max-width:760px){.hero{grid-template-columns:1fr}.wrap{padding:9px}.card{padding:11px}#map{height:400px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="brand">
+    <h1>🌊 Blue Water Living Weather Command</h1>
+    <p>Hyper-local Blue Water & Lake Huron weather · NWS alerts · cross-border radar · multi-model spread · spotter ops</p>
+  </div>
+  <div class="status"><i id="statusDot" class="dot"></i><span id="statusText">Initializing live network…</span></div>
+</header>
+
+<nav id="nav">
+  <button class="active" data-tab="now">🏠 Living Now</button>
+  <button data-tab="radar">📡 Interactive Radar</button>
+  <button data-tab="roads">🚗 Roads & Stations</button>
+  <button data-tab="lake">⚓ Lake & Sky</button>
+  <button data-tab="ops">⚡ Spotter & Jet Ops</button>
+  <button data-tab="garden">🌱 Garden & Pets</button>
+</nav>
+
+<main>
+<section id="now" class="tab active">
+  <div class="card">
+    <div class="controls">
+      <label>Local ZIP <select id="zip">
+        <option value="48049">48049 · North Street / Ruby</option>
+        <option value="48060">48060 · Port Huron</option>
+        <option value="48059">48059 · Fort Gratiot</option>
+        <option value="48079">48079 · St. Clair</option>
+        <option value="48074">48074 · Jeddo</option>
+        <option value="48097">48097 · Yale</option>
+        <option value="48065">48065 · Romeo</option>
+        <option value="48371">48371 · Oxford</option>
+        <option value="48340">48340 · Pontiac</option>
+      </select></label>
+      <button class="btn primary" id="update">Update</button>
+      <button class="btn" id="gps">Auto-GPS + Pin</button>
+      <button class="btn" id="csv">Export CSV</button>
+      <button class="btn" id="share">Share</button>
+    </div>
+  </div>
+
+  <div id="alertsWrap"></div>
+
+  <div class="hero">
+    <div class="card">
+      <div class="muted" id="place">North Street / Ruby, MI</div>
+      <div class="temp" id="temp">—°</div>
+      <div class="condition" id="condition">Loading…</div>
+      <div class="muted small" id="updated">—</div>
+    </div>
+    <div class="card"><h3>Local Metrics</h3><div class="kpi" id="metrics"></div></div>
+  </div>
+
+  <div class="grid g2">
+    <div class="card"><h2>7-Day Local Outlook</h2><div id="daily"></div></div>
+    <div class="card">
+      <h2>Forecast Synopsis</h2>
+      <p id="synopsis">Fetching forecast and local guidance…</p>
+      <div class="controls">
+        <label class="small"><input id="voice" type="checkbox"> Auto Voice-Over</label>
+        <button class="btn" id="read">Read Synopsis</button>
+        <button class="btn" id="stop">Stop Audio</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="controls" style="justify-content:space-between;margin-bottom:10px">
+      <h2 style="margin:0" id="hourlyTitle">3-Hourly Local Forecast (Next 72h)</h2>
+      <div class="controls">
+        <button class="btn primary" id="step3">3-Hourly</button>
+        <button class="btn" id="step1">1-Hourly (36h)</button>
+      </div>
+    </div>
+    <div class="tablewrap">
+      <table id="hourly">
+        <thead><tr><th>Time</th><th>Conditions</th><th>Temp</th><th>Feels</th><th>Dew Pt</th><th>Cloud</th><th>Precip %</th><th>Precip</th><th>Wind</th><th>Gust</th><th>CAPE</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Multi-Model Spread (Next 24 Hours)</h2>
+    <p class="muted small">Compares independent model runs over the exact same upcoming 24-hour window. Tight spread = higher confidence.</p>
+    <div class="tablewrap">
+      <table id="models">
+        <thead><tr><th>Model</th><th>24h Avg</th><th>Max</th><th>Min</th><th>Total Precip</th><th>Peak Gust</th><th>Status</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section id="radar" class="tab">
+  <div class="card">
+    <h2>Cross-Border US + Canadian Radar</h2>
+    <p class="muted small">RainViewer composite reflectivity over a dark basemap. Use Play/Pause to loop recent frames, or open KDTX / Environment Canada Exeter directly.</p>
+    <div id="map"></div>
+    <div class="controls mapnote">
+      <button class="btn primary" id="radarPlay">▶ Play Loop</button>
+      <button class="btn" id="radarStep">Next Frame</button>
+      <button class="btn" id="radarRefresh">Refresh Feed</button>
+      <span id="radarTime" class="small muted">Frame: —</span>
+      <a class="btn" href="https://radar.weather.gov/station/kdtx/standard" target="_blank" rel="noopener">NWS KDTX ↗</a>
+      <a class="btn" href="https://weather.gc.ca/?layers=radar&center=43.35,-81.38&zoom=7" target="_blank" rel="noopener">EC Exeter (CASET) ↗</a>
+    </div>
+  </div>
+</section>
+
+<section id="roads" class="tab">
+  <div class="grid g2">
+    <div class="card">
+      <h2>Road / Surface Advisory</h2>
+      <p id="roadAdvice">Loading…</p>
+      <div class="kpi" id="roadKpi"></div>
+    </div>
+    <div class="card">
+      <h2>Nearest Official NWS Observation</h2>
+      <div id="obs">Loading NWS observation…</div>
+      <p class="small muted" style="margin-top:10px">Automatically checks the closest active NOAA/NWS ASOS/AWOS station (e.g., KPHN St. Clair County, KMTC Selfridge, KPTK Pontiac) for live ground-truth telemetry.</p>
+    </div>
+  </div>
+</section>
+
+<section id="lake" class="tab">
+  <div class="grid g2">
+    <div class="card">
+      <h2>Lake Huron / St. Clair Corridor</h2>
+      <p id="lakeFetchNote" class="small muted">Evaluating wind vector relative to Lake Huron shoreline…</p>
+      <div class="kpi" id="lakeKpi"></div>
+    </div>
+    <div class="card">
+      <h2>Authoritative Great Lakes & Marine Links</h2>
+      <p><a href="https://coastwatch.glerl.noaa.gov/satellite-data-products/great-lakes-surface-environmental-analysis-glsea/" target="_blank" rel="noopener">NOAA GLERL Surface Temp & Ice (GLSEA) ↗</a></p>
+      <p><a href="https://tidesandcurrents.noaa.gov/stationhome.html?id=9014087" target="_blank" rel="noopener">NOAA Lakeport / St. Clair River Gauge ↗</a></p>
+      <p><a href="https://www.ndbc.noaa.gov/station_page.php?station=45008" target="_blank" rel="noopener">NDBC Buoy 45008 (Southern Lake Huron) ↗</a></p>
+      <p><a href="https://www.weather.gov/dtx/marine" target="_blank" rel="noopener">NWS Detroit/Pontiac Marine Forecast ↗</a></p>
+    </div>
+  </div>
+</section>
+
+<section id="ops" class="tab">
+  <div class="grid g2">
+    <div class="card">
+      <h2>NWS Area Forecast Discussion (DTX)</h2>
+      <p class="small muted">Direct link to the NWS Detroit/Pontiac forecaster discussion for mesoscale timing, lake-effect bands, and model confidence.</p>
+      <a class="btn primary" href="https://forecast.weather.gov/product.php?site=DTX&issuedby=DTX&product=AFD" target="_blank" rel="noopener">Open KDTX AFD ↗</a>
+    </div>
+    <div class="card">
+      <h2>Storm Prediction Center</h2>
+      <p class="small muted">Live convective outlooks, mesoscale discussions, and severe watches.</p>
+      <a class="btn primary" href="https://www.spc.noaa.gov/" target="_blank" rel="noopener">Open SPC ↗</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Storm Spotter / SKYWARN Ground-Truth Log</h2>
+    <div class="log">
+      <button class="btn" data-report="Gusty Wind / Downburst">💨 Gusty Wind</button>
+      <button class="btn" data-report="Heavy Rain / Ponding">🌧 Heavy Rain</button>
+      <button class="btn" data-report="Hail / Graupel">🧊 Hail / Graupel</button>
+      <button class="btn" data-report="Low Cloud / Wall Cloud">☁️ Wall / Funnel</button>
+      <button class="btn" data-report="Snow / Ice / Low Vis">❄️ Snow / Ice</button>
+      <button class="btn" data-report="All-Clear / Net Check">✅ All-Clear</button>
+    </div>
+    <div class="controls" style="margin-top:10px">
+      <button class="btn" id="exportLog">Export Log CSV</button>
+      <button class="btn" id="clearLog">Clear Log</button>
+    </div>
+    <div id="reportLog" style="margin-top:10px"></div>
+  </div>
+
+  <div class="card">
+    <h2>Upper-Level Jet Stream / Flight Wind Calculator</h2>
+    <p class="small muted">Pulls live GFS upper-air pressure-level winds (300 / 250 / 200 hPa) at the route midpoint to estimate headwind/tailwind component.</p>
+    <div class="controls">
+      <input id="dep" value="DTW" placeholder="Departure (e.g. DTW)" style="width:120px;text-transform:uppercase">
+      <input id="arr" value="OKC" placeholder="Arrival (e.g. OKC, ORD)" style="width:140px;text-transform:uppercase">
+      <select id="fl">
+        <option value="300hPa">FL300 (~30,000 ft · 300 hPa)</option>
+        <option value="250hPa" selected>FL340 (~34,000 ft · 250 hPa)</option>
+        <option value="200hPa">FL390 (~39,000 ft · 200 hPa)</option>
+      </select>
+      <input id="airspeed" type="number" value="515" min="150" max="700" style="width:100px" title="True Airspeed (mph)">
+      <button class="btn primary" id="simulate">Fetch Jet Winds</button>
+    </div>
+    <p id="flightResult" class="muted" style="margin-top:10px">Supports common airports (DTW, FNT, ORD, OKC, YYZ, LAN, GRR, MSP, DEN, ATL, DFW, JFK, LAX) or defaults to your active location's upper-level wind. Planning reference only.</p>
+  </div>
+</section>
+
+<section id="garden" class="tab">
+  <div class="grid g2">
+    <div class="card">
+      <h2>Outdoor Pets & Backyard Comfort</h2>
+      <div class="kpi" id="petKpi"></div>
+      <p id="petAdvice" style="margin-top:10px">Loading…</p>
+    </div>
+    <div class="card">
+      <h2>7-Day Forecast GDD Estimator</h2>
+      <div class="controls">
+        <label>Base °F <select id="base"><option value="50">50°F — warm crops</option><option value="45">45°F — cool crops</option><option value="41">41°F — hardy crops</option></select></label>
+        <label>Upper cap <select id="cutoff"><option value="86">86°F</option><option value="999">No cap</option></select></label>
+        <label>Start <input id="season" type="date"></label>
+        <button class="btn primary" id="calcGdd">Calculate GDD</button>
+      </div>
+      <p id="gddResult" class="small muted" style="margin-top:10px">Estimates Growing Degree Days over the 7-day forecast window.</p>
+    </div>
+  </div>
+  <div class="card"><h2>7-Day Frost / Freeze Watch</h2><p id="frost">—</p></div>
+</section>
+</main>
+
+<footer>
+  Blue Water Living Weather Command · Static GitHub Pages app. Forecast & upper-air winds: Open-Meteo (HRRR/GFS/ECMWF/GEM); Alerts & observations: NOAA/NWS; Radar: RainViewer.
+</footer>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script>
+const ZIPS={
+  "48049":{name:"North Street / Ruby, MI",lat:42.9900,lon:-82.5800},
+  "48060":{name:"Port Huron, MI",lat:42.9709,lon:-82.4249},
+  "48059":{name:"Fort Gratiot, MI",lat:43.0531,lon:-82.4866},
+  "48079":{name:"St. Clair, MI",lat:42.8209,lon:-82.4860},
+  "48074":{name:"Jeddo, MI",lat:43.1475,lon:-82.6724},
+  "48097":{name:"Yale, MI",lat:43.1309,lon:-82.7988},
+  "48065":{name:"Romeo, MI",lat:42.8023,lon:-83.0124},
+  "48371":{name:"Oxford, MI",lat:42.8248,lon:-83.2647},
+  "48340":{name:"Pontiac, MI",lat:42.6389,lon:-83.2910}
+};
+const AIRPORTS={
+  DTW:[42.2124,-83.3534],FNT:[42.9654,-83.7436],ORD:[41.9742,-87.9073],OKC:[35.3931,-97.6007],
+  YYZ:[43.6777,-79.6248],LAN:[42.7787,-84.5874],GRR:[42.8808,-85.5228],MSP:[44.8848,-93.2223],
+  DEN:[39.8561,-104.6737],ATL:[33.6407,-84.4277],DFW:[32.8998,-97.0403],JFK:[40.6413,-73.7781],
+  LAX:[33.9416,-118.4085],MKE:[42.9472,-87.8966],CLE:[41.4117,-81.8498]
+};
+
+const state={zip:"48049",place:"North Street / Ruby, MI",lat:42.99,lon:-82.58,data:null,hourlyStep:3};
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const f=n=>n==null||Number.isNaN(n)?"—":Math.round(n)+"°";
+const mph=n=>n==null||Number.isNaN(n)?"—":Math.round(n)+" mph"; // Open-Meteo already returns mph
+const deg=d=>{if(d==null)return"";const a=["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"];return a[Math.round(((d%360)+360)%360/22.5)%16]};
+const hpaToInHg=p=>p==null?"—":(p*0.02952998).toFixed(2)+" inHg";
+
+function wx(code){
+  const m={0:"Clear",1:"Mostly clear",2:"Partly cloudy",3:"Overcast",45:"Fog",48:"Freezing fog",51:"Light drizzle",53:"Drizzle",55:"Heavy drizzle",56:"Freezing drizzle",57:"Heavy freezing drizzle",61:"Light rain",63:"Rain",65:"Heavy rain",66:"Freezing rain",67:"Heavy freezing rain",71:"Light snow",73:"Snow",75:"Heavy snow",77:"Snow grains",80:"Light showers",81:"Rain showers",82:"Heavy showers",85:"Snow showers",86:"Heavy snow showers",95:"Thunderstorm",96:"T-Storm + hail",99:"Severe T-Storm + hail"};
+  return m[code]??"Code "+code;
+}
+function setStatus(mode,msg){
+  const dot=$("statusDot");
+  dot.className="dot"+(mode==="live"?" live":mode==="err"?" errdot":"");
+  $("statusText").textContent=msg;
+}
+async function getJSON(url){
+  const r=await fetch(url,{cache:"no-store"});
+  if(!r.ok)throw new Error(r.status+" "+r.statusText);
+  return r.json();
+}
+
+function forecastURL(lat,lon,model="best_match"){
+  const hourly=["temperature_2m","apparent_temperature","dew_point_2m","precipitation_probability","precipitation","cloud_cover","wind_speed_10m","wind_gusts_10m","wind_direction_10m","cape","weather_code"].join(",");
+  const daily=["weather_code","temperature_2m_max","temperature_2m_min","precipitation_sum","precipitation_probability_max","wind_speed_10m_max","wind_gusts_10m_max"].join(",");
+  const current=["temperature_2m","relative_humidity_2m","dew_point_2m","apparent_temperature","precipitation","weather_code","cloud_cover","wind_speed_10m","wind_direction_10m","wind_gusts_10m","pressure_msl"].join(",");
+  return `https://api.open-meteo.com/v1/forecast?latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}&hourly=${hourly}&daily=${daily}&current=${current}&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=America%2FDetroit&forecast_days=7&models=${encodeURIComponent(model)}`;
+}
+
+async function load(){
+  if(state.zip && ZIPS[state.zip]){
+    const z=ZIPS[state.zip];
+    state.place=z.name;state.lat=z.lat;state.lon=z.lon;
+  }
+  $("place").textContent=state.place;
+  setStatus("loading","Fetching live weather & NWS feeds…");
+  updateMapPin();
+  try{
+    state.data=await getJSON(forecastURL(state.lat,state.lon));
+    render();
+    await Promise.allSettled([loadAlerts(),loadModels(),loadObservation()]);
+    setStatus("live","Live · updated "+new Date().toLocaleTimeString());
+  }catch(e){
+    setStatus("err","Weather fetch failed — check connection");
+    $("condition").innerHTML='<span class="err">'+esc(e.message)+'</span>';
+  }
+}
+
+function render(){
+  const d=state.data,c=d.current;
+  $("temp").textContent=f(c.temperature_2m);
+  $("condition").textContent=wx(c.weather_code);
+  $("updated").textContent=`Feels ${f(c.apparent_temperature)} · Dew Pt ${f(c.dew_point_2m)} · ${c.relative_humidity_2m}% RH · Model time ${new Date(c.time).toLocaleString()}`;
+  $("metrics").innerHTML=[
+    ["Wind",mph(c.wind_speed_10m)+" "+deg(c.wind_direction_10m)],
+    ["Gust",mph(c.wind_gusts_10m)],
+    ["Dew Point",f(c.dew_point_2m)],
+    ["Pressure",`${Math.round(c.pressure_msl)} hPa (${hpaToInHg(c.pressure_msl)})`],
+    ["Cloud Cover",Math.round(c.cloud_cover)+"%"],
+    ["Precip (1h)",(c.precipitation??0).toFixed(2)+" in"]
+  ].map(x=>`<div><div class="small muted">${x[0]}</div><div><b>${x[1]}

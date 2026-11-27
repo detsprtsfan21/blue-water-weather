@@ -1,0 +1,707 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#07111d">
+<meta name="description" content="Blue Water Living Weather Command — hyper-local weather dashboard for the Blue Water & Lake Huron corridor.">
+<title>Blue Water Living Weather Command</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+<style>
+:root{--bg:#07111d;--panel:#0d1b2a;--panel2:#102337;--line:#20364c;--text:#e7f0f8;--muted:#8fa8bd;--accent:#48b8ff;--good:#62d68a;--warn:#ffd166;--bad:#ff6b6b}
+*{box-sizing:border-box}html,body{margin:0;background:radial-gradient(circle at top,#10273a 0,#07111d 45%,#050b12 100%);color:var(--text);font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+button,input,select{font:inherit}button{cursor:pointer}a{color:var(--accent)}.wrap{max-width:1500px;margin:auto;padding:14px}
+header{display:flex;gap:14px;align-items:center;justify-content:space-between;padding:12px 4px 16px;flex-wrap:wrap}
+.brand h1{font-size:clamp(22px,4vw,36px);margin:0}.brand p{margin:3px 0;color:var(--muted)}
+.status{display:flex;gap:8px;align-items:center;color:var(--muted);font-size:12px}.dot{width:9px;height:9px;border-radius:50%;background:var(--warn);box-shadow:0 0 12px currentColor}.dot.live{background:var(--good)}.dot.errdot{background:var(--bad)}
+nav{display:flex;gap:6px;overflow:auto;padding:4px 0 12px;position:sticky;top:0;z-index:20;background:#07111df2;backdrop-filter:blur(8px)}
+nav button,.btn{border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:9px;padding:9px 12px;white-space:nowrap;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+nav button.active,.btn.primary{background:#123650;border-color:#286b98}
+main{display:grid;gap:12px}.tab{display:none}.tab.active{display:block}.grid{display:grid;gap:12px}.g2{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}.g3{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+.card{background:linear-gradient(145deg,#0d1b2a,#091622);border:1px solid var(--line);border-radius:14px;padding:14px;box-shadow:0 10px 30px #0005;margin-bottom:12px}.card h2,.card h3{margin:0 0 10px}.muted{color:var(--muted)}.small{font-size:12px}
+.controls{display:flex;gap:7px;flex-wrap:wrap;align-items:center}.controls input,.controls select{background:#081521;color:var(--text);border:1px solid var(--line);border-radius:8px;padding:9px}
+.hero{display:grid;grid-template-columns:1.2fr .8fr;gap:12px}.temp{font-size:clamp(48px,9vw,84px);font-weight:700;line-height:1}.condition{font-size:18px;margin:4px 0}
+table{width:100%;border-collapse:collapse;min-width:820px}th,td{padding:8px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}th{color:#a9c2d6;background:#0a1724;position:sticky;top:0}.tablewrap{overflow:auto;border:1px solid var(--line);border-radius:10px}
+.dayrow{display:grid;grid-template-columns:90px 1fr 60px 60px 95px;gap:8px;align-items:center;padding:9px 6px;border-bottom:1px solid var(--line)}.bar{height:7px;background:#193247;border-radius:10px;overflow:hidden;margin-top:4px}.bar i{display:block;height:100%;background:var(--accent)}
+#map{height:520px;border-radius:12px;overflow:hidden;border:1px solid var(--line)}.leaflet-container{background:#07111d}.mapnote{margin-top:8px}
+.kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}.kpi>div{background:#0a1724;border:1px solid var(--line);border-radius:10px;padding:10px}
+.alert-box{border-radius:12px;padding:12px 14px;margin-bottom:12px;border:1px solid var(--line);background:#0a1c2e}
+.alert-box.warn{border-color:#d97706;background:#2b1a07}.alert-box.bad{border-color:#dc2626;background:#2b0b0e}.alert-box.okbox{border-color:#1e4d35;background:#092117}
+.alert-box details{margin-top:6px}.alert-box summary{cursor:pointer;font-weight:600}
+.log{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}.log button{padding:11px;justify-content:center}.report{display:flex;gap:8px;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);padding:8px 0}
+.badge{display:inline-block;padding:2px 7px;border-radius:999px;font-size:11px;font-weight:600;border:1px solid var(--line);background:#102337}
+.badge.onshore{border-color:#286b98;color:#7fd0ff}.badge.offshore{border-color:#3a5268;color:#a9c2d6}
+footer{color:var(--muted);font-size:11px;padding:16px 3px}.err{color:#ff9b9b}.ok{color:#8de3a6}.warn-txt{color:var(--warn)}
+@media(max-width:760px){.hero{grid-template-columns:1fr}.wrap{padding:9px}.card{padding:11px}#map{height:400px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="brand">
+    <h1>🌊 Blue Water Living Weather Command</h1>
+    <p>Hyper-local Blue Water & Lake Huron weather · NWS alerts · cross-border radar · multi-model spread · spotter ops</p>
+  </div>
+  <div class="status"><i id="statusDot" class="dot"></i><span id="statusText">Initializing live network…</span></div>
+</header>
+
+<nav id="nav">
+  <button class="active" data-tab="now">🏠 Living Now</button>
+  <button data-tab="radar">📡 Interactive Radar</button>
+  <button data-tab="roads">🚗 Roads & Stations</button>
+  <button data-tab="lake">⚓ Lake & Sky</button>
+  <button data-tab="ops">⚡ Spotter & Jet Ops</button>
+  <button data-tab="garden">🌱 Garden & Pets</button>
+</nav>
+
+<main>
+<section id="now" class="tab active">
+  <div class="card">
+    <div class="controls">
+      <label>Local ZIP <select id="zip">
+        <option value="48049">48049 · North Street / Ruby</option>
+        <option value="48060">48060 · Port Huron</option>
+        <option value="48059">48059 · Fort Gratiot</option>
+        <option value="48079">48079 · St. Clair</option>
+        <option value="48074">48074 · Jeddo</option>
+        <option value="48097">48097 · Yale</option>
+        <option value="48065">48065 · Romeo</option>
+        <option value="48371">48371 · Oxford</option>
+        <option value="48340">48340 · Pontiac</option>
+      </select></label>
+      <button class="btn primary" id="update">Update</button>
+      <button class="btn" id="gps">Auto-GPS + Pin</button>
+      <button class="btn" id="csv">Export CSV</button>
+      <button class="btn" id="share">Share</button>
+    </div>
+  </div>
+
+  <div id="alertsWrap"></div>
+
+  <div class="hero">
+    <div class="card">
+      <div class="muted" id="place">North Street / Ruby, MI</div>
+      <div class="temp" id="temp">—°</div>
+      <div class="condition" id="condition">Loading…</div>
+      <div class="muted small" id="updated">—</div>
+    </div>
+    <div class="card"><h3>Local Metrics</h3><div class="kpi" id="metrics"></div></div>
+  </div>
+
+  <div class="grid g2">
+    <div class="card"><h2>7-Day Local Outlook</h2><div id="daily"></div></div>
+    <div class="card">
+      <h2>Forecast Synopsis</h2>
+      <p id="synopsis">Fetching forecast and local guidance…</p>
+      <div class="controls">
+        <label class="small"><input id="voice" type="checkbox"> Auto Voice-Over</label>
+        <button class="btn" id="read">Read Synopsis</button>
+        <button class="btn" id="stop">Stop Audio</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="controls" style="justify-content:space-between;margin-bottom:10px">
+      <h2 style="margin:0" id="hourlyTitle">3-Hourly Local Forecast (Next 72h)</h2>
+      <div class="controls">
+        <button class="btn primary" id="step3">3-Hourly</button>
+        <button class="btn" id="step1">1-Hourly (36h)</button>
+      </div>
+    </div>
+    <div class="tablewrap">
+      <table id="hourly">
+        <thead><tr><th>Time</th><th>Conditions</th><th>Temp</th><th>Feels</th><th>Dew Pt</th><th>Cloud</th><th>Precip %</th><th>Precip</th><th>Wind</th><th>Gust</th><th>CAPE</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Multi-Model Spread (Next 24 Hours)</h2>
+    <p class="muted small">Compares independent model runs over the exact same upcoming 24-hour window. Tight spread = higher confidence.</p>
+    <div class="tablewrap">
+      <table id="models">
+        <thead><tr><th>Model</th><th>24h Avg</th><th>Max</th><th>Min</th><th>Total Precip</th><th>Peak Gust</th><th>Status</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section id="radar" class="tab">
+  <div class="card">
+    <h2>Cross-Border US + Canadian Radar</h2>
+    <p class="muted small">RainViewer composite reflectivity over a dark basemap. Use Play/Pause to loop recent frames, or open KDTX / Environment Canada Exeter directly.</p>
+    <div id="map"></div>
+    <div class="controls mapnote">
+      <button class="btn primary" id="radarPlay">▶ Play Loop</button>
+      <button class="btn" id="radarStep">Next Frame</button>
+      <button class="btn" id="radarRefresh">Refresh Feed</button>
+      <span id="radarTime" class="small muted">Frame: —</span>
+      <a class="btn" href="https://radar.weather.gov/station/kdtx/standard" target="_blank" rel="noopener">NWS KDTX ↗</a>
+      <a class="btn" href="https://weather.gc.ca/?layers=radar&center=43.35,-81.38&zoom=7" target="_blank" rel="noopener">EC Exeter (CASET) ↗</a>
+    </div>
+  </div>
+</section>
+
+<section id="roads" class="tab">
+  <div class="grid g2">
+    <div class="card">
+      <h2>Road / Surface Advisory</h2>
+      <p id="roadAdvice">Loading…</p>
+      <div class="kpi" id="roadKpi"></div>
+    </div>
+    <div class="card">
+      <h2>Nearest Official NWS Observation</h2>
+      <div id="obs">Loading NWS observation…</div>
+      <p class="small muted" style="margin-top:10px">Automatically checks the closest active NOAA/NWS ASOS/AWOS station (e.g., KPHN St. Clair County, KMTC Selfridge, KPTK Pontiac) for live ground-truth telemetry.</p>
+    </div>
+  </div>
+</section>
+
+<section id="lake" class="tab">
+  <div class="grid g2">
+    <div class="card">
+      <h2>Lake Huron / St. Clair Corridor</h2>
+      <p id="lakeFetchNote" class="small muted">Evaluating wind vector relative to Lake Huron shoreline…</p>
+      <div class="kpi" id="lakeKpi"></div>
+    </div>
+    <div class="card">
+      <h2>Authoritative Great Lakes & Marine Links</h2>
+      <p><a href="https://coastwatch.glerl.noaa.gov/satellite-data-products/great-lakes-surface-environmental-analysis-glsea/" target="_blank" rel="noopener">NOAA GLERL Surface Temp & Ice (GLSEA) ↗</a></p>
+      <p><a href="https://tidesandcurrents.noaa.gov/stationhome.html?id=9014087" target="_blank" rel="noopener">NOAA Lakeport / St. Clair River Gauge ↗</a></p>
+      <p><a href="https://www.ndbc.noaa.gov/station_page.php?station=45008" target="_blank" rel="noopener">NDBC Buoy 45008 (Southern Lake Huron) ↗</a></p>
+      <p><a href="https://www.weather.gov/dtx/marine" target="_blank" rel="noopener">NWS Detroit/Pontiac Marine Forecast ↗</a></p>
+    </div>
+  </div>
+</section>
+
+<section id="ops" class="tab">
+  <div class="grid g2">
+    <div class="card">
+      <h2>NWS Area Forecast Discussion (DTX)</h2>
+      <p class="small muted">Direct link to the NWS Detroit/Pontiac forecaster discussion for mesoscale timing, lake-effect bands, and model confidence.</p>
+      <a class="btn primary" href="https://forecast.weather.gov/product.php?site=DTX&issuedby=DTX&product=AFD" target="_blank" rel="noopener">Open KDTX AFD ↗</a>
+    </div>
+    <div class="card">
+      <h2>Storm Prediction Center</h2>
+      <p class="small muted">Live convective outlooks, mesoscale discussions, and severe watches.</p>
+      <a class="btn primary" href="https://www.spc.noaa.gov/" target="_blank" rel="noopener">Open SPC ↗</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Storm Spotter / SKYWARN Ground-Truth Log</h2>
+    <div class="log">
+      <button class="btn" data-report="Gusty Wind / Downburst">💨 Gusty Wind</button>
+      <button class="btn" data-report="Heavy Rain / Ponding">🌧 Heavy Rain</button>
+      <button class="btn" data-report="Hail / Graupel">🧊 Hail / Graupel</button>
+      <button class="btn" data-report="Low Cloud / Wall Cloud">☁️ Wall / Funnel</button>
+      <button class="btn" data-report="Snow / Ice / Low Vis">❄️ Snow / Ice</button>
+      <button class="btn" data-report="All-Clear / Net Check">✅ All-Clear</button>
+    </div>
+    <div class="controls" style="margin-top:10px">
+      <button class="btn" id="exportLog">Export Log CSV</button>
+      <button class="btn" id="clearLog">Clear Log</button>
+    </div>
+    <div id="reportLog" style="margin-top:10px"></div>
+  </div>
+
+  <div class="card">
+    <h2>Upper-Level Jet Stream / Flight Wind Calculator</h2>
+    <p class="small muted">Pulls live GFS upper-air pressure-level winds (300 / 250 / 200 hPa) at the route midpoint to estimate headwind/tailwind component.</p>
+    <div class="controls">
+      <input id="dep" value="DTW" placeholder="Departure (e.g. DTW)" style="width:120px;text-transform:uppercase">
+      <input id="arr" value="OKC" placeholder="Arrival (e.g. OKC, ORD)" style="width:140px;text-transform:uppercase">
+      <select id="fl">
+        <option value="300hPa">FL300 (~30,000 ft · 300 hPa)</option>
+        <option value="250hPa" selected>FL340 (~34,000 ft · 250 hPa)</option>
+        <option value="200hPa">FL390 (~39,000 ft · 200 hPa)</option>
+      </select>
+      <input id="airspeed" type="number" value="515" min="150" max="700" style="width:100px" title="True Airspeed (mph)">
+      <button class="btn primary" id="simulate">Fetch Jet Winds</button>
+    </div>
+    <p id="flightResult" class="muted" style="margin-top:10px">Supports common airports (DTW, FNT, ORD, OKC, YYZ, LAN, GRR, MSP, DEN, ATL, DFW, JFK, LAX) or defaults to your active location's upper-level wind. Planning reference only.</p>
+  </div>
+</section>
+
+<section id="garden" class="tab">
+  <div class="grid g2">
+    <div class="card">
+      <h2>Outdoor Pets & Backyard Comfort</h2>
+      <div class="kpi" id="petKpi"></div>
+      <p id="petAdvice" style="margin-top:10px">Loading…</p>
+    </div>
+    <div class="card">
+      <h2>7-Day Forecast GDD Estimator</h2>
+      <div class="controls">
+        <label>Base °F <select id="base"><option value="50">50°F — warm crops</option><option value="45">45°F — cool crops</option><option value="41">41°F — hardy crops</option></select></label>
+        <label>Upper cap <select id="cutoff"><option value="86">86°F</option><option value="999">No cap</option></select></label>
+        <label>Start <input id="season" type="date"></label>
+        <button class="btn primary" id="calcGdd">Calculate GDD</button>
+      </div>
+      <p id="gddResult" class="small muted" style="margin-top:10px">Estimates Growing Degree Days over the 7-day forecast window.</p>
+    </div>
+  </div>
+  <div class="card"><h2>7-Day Frost / Freeze Watch</h2><p id="frost">—</p></div>
+</section>
+</main>
+
+<footer>
+  Blue Water Living Weather Command · Static GitHub Pages app. Forecast & upper-air winds: Open-Meteo (HRRR/GFS/ECMWF/GEM); Alerts & observations: NOAA/NWS; Radar: RainViewer.
+</footer>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script>
+const ZIPS={
+  "48049":{name:"North Street / Ruby, MI",lat:42.9900,lon:-82.5800},
+  "48060":{name:"Port Huron, MI",lat:42.9709,lon:-82.4249},
+  "48059":{name:"Fort Gratiot, MI",lat:43.0531,lon:-82.4866},
+  "48079":{name:"St. Clair, MI",lat:42.8209,lon:-82.4860},
+  "48074":{name:"Jeddo, MI",lat:43.1475,lon:-82.6724},
+  "48097":{name:"Yale, MI",lat:43.1309,lon:-82.7988},
+  "48065":{name:"Romeo, MI",lat:42.8023,lon:-83.0124},
+  "48371":{name:"Oxford, MI",lat:42.8248,lon:-83.2647},
+  "48340":{name:"Pontiac, MI",lat:42.6389,lon:-83.2910}
+};
+const AIRPORTS={
+  DTW:[42.2124,-83.3534],FNT:[42.9654,-83.7436],ORD:[41.9742,-87.9073],OKC:[35.3931,-97.6007],
+  YYZ:[43.6777,-79.6248],LAN:[42.7787,-84.5874],GRR:[42.8808,-85.5228],MSP:[44.8848,-93.2223],
+  DEN:[39.8561,-104.6737],ATL:[33.6407,-84.4277],DFW:[32.8998,-97.0403],JFK:[40.6413,-73.7781],
+  LAX:[33.9416,-118.4085],MKE:[42.9472,-87.8966],CLE:[41.4117,-81.8498]
+};
+
+const state={zip:"48049",place:"North Street / Ruby, MI",lat:42.99,lon:-82.58,data:null,hourlyStep:3};
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const f=n=>n==null||Number.isNaN(n)?"—":Math.round(n)+"°";
+const mph=n=>n==null||Number.isNaN(n)?"—":Math.round(n)+" mph"; // Open-Meteo already returns mph
+const deg=d=>{if(d==null)return"";const a=["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"];return a[Math.round(((d%360)+360)%360/22.5)%16]};
+const hpaToInHg=p=>p==null?"—":(p*0.02952998).toFixed(2)+" inHg";
+
+function wx(code){
+  const m={0:"Clear",1:"Mostly clear",2:"Partly cloudy",3:"Overcast",45:"Fog",48:"Freezing fog",51:"Light drizzle",53:"Drizzle",55:"Heavy drizzle",56:"Freezing drizzle",57:"Heavy freezing drizzle",61:"Light rain",63:"Rain",65:"Heavy rain",66:"Freezing rain",67:"Heavy freezing rain",71:"Light snow",73:"Snow",75:"Heavy snow",77:"Snow grains",80:"Light showers",81:"Rain showers",82:"Heavy showers",85:"Snow showers",86:"Heavy snow showers",95:"Thunderstorm",96:"T-Storm + hail",99:"Severe T-Storm + hail"};
+  return m[code]??"Code "+code;
+}
+function setStatus(mode,msg){
+  const dot=$("statusDot");
+  dot.className="dot"+(mode==="live"?" live":mode==="err"?" errdot":"");
+  $("statusText").textContent=msg;
+}
+async function getJSON(url){
+  const r=await fetch(url,{cache:"no-store"});
+  if(!r.ok)throw new Error(r.status+" "+r.statusText);
+  return r.json();
+}
+
+function forecastURL(lat,lon,model="best_match"){
+  const hourly=["temperature_2m","apparent_temperature","dew_point_2m","precipitation_probability","precipitation","cloud_cover","wind_speed_10m","wind_gusts_10m","wind_direction_10m","cape","weather_code"].join(",");
+  const daily=["weather_code","temperature_2m_max","temperature_2m_min","precipitation_sum","precipitation_probability_max","wind_speed_10m_max","wind_gusts_10m_max"].join(",");
+  const current=["temperature_2m","relative_humidity_2m","dew_point_2m","apparent_temperature","precipitation","weather_code","cloud_cover","wind_speed_10m","wind_direction_10m","wind_gusts_10m","pressure_msl"].join(",");
+  return `https://api.open-meteo.com/v1/forecast?latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}&hourly=${hourly}&daily=${daily}&current=${current}&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=America%2FDetroit&forecast_days=7&models=${encodeURIComponent(model)}`;
+}
+
+async function load(){
+  if(state.zip && ZIPS[state.zip]){
+    const z=ZIPS[state.zip];
+    state.place=z.name;state.lat=z.lat;state.lon=z.lon;
+  }
+  $("place").textContent=state.place;
+  setStatus("loading","Fetching live weather & NWS feeds…");
+  updateMapPin();
+  try{
+    state.data=await getJSON(forecastURL(state.lat,state.lon));
+    render();
+    await Promise.allSettled([loadAlerts(),loadModels(),loadObservation()]);
+    setStatus("live","Live · updated "+new Date().toLocaleTimeString());
+  }catch(e){
+    setStatus("err","Weather fetch failed — check connection");
+    $("condition").innerHTML='<span class="err">'+esc(e.message)+'</span>';
+  }
+}
+
+function render(){
+  const d=state.data,c=d.current;
+  $("temp").textContent=f(c.temperature_2m);
+  $("condition").textContent=wx(c.weather_code);
+  $("updated").textContent=`Feels ${f(c.apparent_temperature)} · Dew Pt ${f(c.dew_point_2m)} · ${c.relative_humidity_2m}% RH · Model time ${new Date(c.time).toLocaleString()}`;
+  $("metrics").innerHTML=[
+    ["Wind",mph(c.wind_speed_10m)+" "+deg(c.wind_direction_10m)],
+    ["Gust",mph(c.wind_gusts_10m)],
+    ["Dew Point",f(c.dew_point_2m)],
+    ["Pressure",`${Math.round(c.pressure_msl)} hPa (${hpaToInHg(c.pressure_msl)})`],
+    ["Cloud Cover",Math.round(c.cloud_cover)+"%"],
+    ["Precip (1h)",(c.precipitation??0).toFixed(2)+" in"]
+  ].map(x=>`<div><div class="small muted">${x[0]}</div><div><b>${x[1]}</b></div></div>`).join("");
+
+  const days=d.daily;
+  $("daily").innerHTML=days.time.map((t,i)=>`<div class="dayrow">
+    <b>${new Date(t+"T12:00").toLocaleDateString(undefined,{weekday:"short",month:"numeric",day:"numeric"})}</b>
+    <span>${wx(days.weather_code[i])}<div class="bar"><i style="width:${Math.max(4,days.precipitation_probability_max[i]||0)}%"></i></div></span>
+    <b>${f(days.temperature_2m_max[i])}</b>
+    <span class="muted">${f(days.temperature_2m_min[i])}</span>
+    <span class="small">${days.precipitation_probability_max[i]??0}% · ${(days.precipitation_sum[i]??0).toFixed(2)}"</span>
+  </div>`).join("");
+
+  renderHourly();
+
+  const rain=days.precipitation_probability_max[0]||0;
+  const maxGust=days.wind_gusts_10m_max[0]||0;
+  $("roadAdvice").textContent=roadAdvice(c.temperature_2m,c.apparent_temperature,rain,maxGust,c.precipitation);
+  $("roadKpi").innerHTML=[
+    ["Air Temp",f(c.temperature_2m)],["Feels Like",f(c.apparent_temperature)],
+    ["Today Precip %",rain+"%"],["Today Max Gust",mph(maxGust)]
+  ].map(x=>`<div><div class="small muted">${x[0]}</div><div><b>${x[1]}</b></div></div>`).join("");
+
+  // Lake Huron fetch evaluation (Lake Huron lies roughly NNE through ESE of St. Clair County: 10° to 135°)
+  const wd=c.wind_direction_10m;
+  const isOnshore=(wd>=10 && wd<=135);
+  const fetchBadge=isOnshore
+    ? '<span class="badge onshore">ONSHORE LAKE HURON FETCH</span> Winds off Lake Huron can boost cloud cover, lake-effect precip, and moderate shoreline temps.'
+    : '<span class="badge offshore">OFFSHORE / INLAND FLOW</span> Continental air mass with minimal direct Lake Huron moisture feed.';
+  $("lakeFetchNote").innerHTML=fetchBadge;
+  $("lakeKpi").innerHTML=[
+    ["Wind Vector",mph(c.wind_speed_10m)+" "+deg(wd)+" ("+Math.round(wd)+"°)"],
+    ["Gusts",mph(c.wind_gusts_10m)],
+    ["Dew Point",f(c.dew_point_2m)],
+    ["Pressure",`${Math.round(c.pressure_msl)} hPa / ${hpaToInHg(c.pressure_msl)}`]
+  ].map(x=>`<div><div class="small muted">${x[0]}</div><div><b>${x[1]}</b></div></div>`).join("");
+
+  const comfort=comfortAdvice(c.temperature_2m,c.apparent_temperature,c.wind_gusts_10m,c.precipitation);
+  $("petAdvice").textContent=comfort.text;
+  $("petKpi").innerHTML=[
+    ["Comfort",comfort.level],["Feels Like",f(c.apparent_temperature)],
+    ["Gusts",mph(c.wind_gusts_10m)],["Precip",`${(c.precipitation??0).toFixed(2)} in`]
+  ].map(x=>`<div><div class="small muted">${x[0]}</div><div><b>${x[1]}</b></div></div>`).join("");
+
+  const frost=days.temperature_2m_min.slice(0,7).map((v,i)=>
+    v<=32?`${new Date(days.time[i]+"T12:00").toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"})}: Freeze (${f(v)})`
+    :v<=36?`${new Date(days.time[i]+"T12:00").toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"})}: Frost risk (${f(v)})`:null
+  ).filter(Boolean);
+  $("frost").textContent=frost.length?frost.join(" · "):"No forecast lows at or below 36°F in the next 7 days.";
+
+  $("synopsis").textContent=`${wx(c.weather_code)} at ${f(c.temperature_2m)}, feeling like ${f(c.apparent_temperature)} with a ${f(c.dew_point_2m)} dew point. Winds ${mph(c.wind_speed_10m)} from the ${deg(wd)}, gusting to ${mph(c.wind_gusts_10m)}. Today's precipitation probability peaks near ${rain}%.`;
+  if($("voice").checked) speak($("synopsis").textContent);
+}
+
+function renderHourly(){
+  if(!state.data)return;
+  const h=state.data.hourly, now=Date.now();
+  let start=h.time.findIndex(t=>new Date(t).getTime()>=now-1800000);
+  if(start<0)start=0;
+  const step=state.hourlyStep;
+  const count=step===3?24:36; // 72h for 3-hourly, 36h for 1-hourly
+  $("hourlyTitle").textContent=step===3?"3-Hourly Local Forecast (Next 72h)":"1-Hourly Local Forecast (Next 36h)";
+  $("step3").classList.toggle("primary",step===3);
+  $("step1").classList.toggle("primary",step===1);
+  const rows=[];
+  for(let k=0;k<count;k++){
+    const i=start+k*step;
+    if(i>=h.time.length)break;
+    rows.push(`<tr>
+      <td>${new Date(h.time[i]).toLocaleString(undefined,{weekday:"short",hour:"numeric"})}</td>
+      <td>${wx(h.weather_code[i])}</td>
+      <td><b>${f(h.temperature_2m[i])}</b></td>
+      <td>${f(h.apparent_temperature[i])}</td>
+      <td>${f(h.dew_point_2m[i])}</td>
+      <td>${h.cloud_cover[i]??0}%</td>
+      <td>${h.precipitation_probability[i]??0}%</td>
+      <td>${(h.precipitation[i]??0).toFixed(2)}"</td>
+      <td>${mph(h.wind_speed_10m[i])} ${deg(h.wind_direction_10m[i])}</td>
+      <td>${mph(h.wind_gusts_10m[i])}</td>
+      <td>${Math.round(h.cape[i]||0)}</td>
+    </tr>`);
+  }
+  $("hourly").querySelector("tbody").innerHTML=rows.join("");
+}
+
+function roadAdvice(t,feel,rain,gust,precip){
+  if(t<=32&&(precip>0||rain>=50))return"WINTER SURFACE CONCERN: Sub-freezing air with precipitation risk. Watch for black ice on bridges, overpasses, and rural gravel/asphalt transitions.";
+  if(feel<=34)return"COLD PAVEMENT WATCH: Surface temps near freezing; elevated bridges and shaded curves can slick over first.";
+  if(rain>=60||precip>0.15)return"WET ROAD ADVISORY: Ponding and reduced traction possible, especially on low-lying rural roads.";
+  if(gust>=35)return"HIGH WIND ADVISORY: Strong gusts can push high-profile vehicles on exposed stretches and bridges.";
+  return"Routine driving conditions based on current model guidance. Monitor radar for sudden localized cells.";
+}
+function comfortAdvice(t,feel,gust,precip){
+  if(feel<=15)return{level:"Dangerous Cold",text:"Limit outdoor pet exposure to brief trips; wind chill poses a rapid cold-stress risk."};
+  if(feel<=32)return{level:"Cold",text:"Keep outdoor time supervised; ensure dry, wind-blocked shelter and unfrozen water."};
+  if(feel>=90)return{level:"Heat Stress",text:"Provide shade and fresh water; avoid midday exertion on hot pavement."};
+  if(precip>0.1)return{level:"Wet",text:"Wet conditions increase chilling; dry shelter is recommended."};
+  if(gust>=30)return{level:"Windy",text:"Gusty winds reduce outdoor comfort and can blow lightweight items around."};
+  return{level:"Comfortable",text:"No major temperature, wind, or precipitation stress signals right now."};
+}
+
+async function loadAlerts(){
+  const wrap=$("alertsWrap");
+  try{
+    const j=await getJSON(`https://api.weather.gov/alerts/active?point=${state.lat.toFixed(4)},${state.lon.toFixed(4)}`);
+    const feats=j.features||[];
+    if(!feats.length){
+      wrap.innerHTML=`<div class="alert-box okbox small">✅ <b>No active NWS watches, warnings, or advisories</b> for ${esc(state.place)}.</div>`;
+      return;
+    }
+    wrap.innerHTML=feats.map(item=>{
+      const p=item.properties;
+      const sev=/extreme|severe/i.test(p.severity)?"bad":"warn";
+      return `<div class="alert-box ${sev}">
+        <div><b>⚠️ ${esc(p.event)}</b> <span class="small muted">· ${esc(p.headline||"")}</span></div>
+        <details class="small"><summary>View NWS details & timing</summary>
+          <p style="white-space:pre-wrap;margin:6px 0">${esc(p.description||"")}</p>
+          ${p.instruction?`<p><b>Action:</b> ${esc(p.instruction)}</p>`:""}
+        </details>
+      </div>`;
+    }).join("");
+  }catch(e){
+    wrap.innerHTML=`<div class="alert-box small muted">NWS alert feed temporarily unreachable (${esc(e.message)}).</div>`;
+  }
+}
+
+async function loadModels(){
+  const specs=[
+    ["HRRR (3km US)","gfs_hrrr"],
+    ["GFS (NOAA)","gfs_seamless"],
+    ["ECMWF (Euro)","ecmwf_ifs025"],
+    ["GEM (Canadian)","gem_seamless"],
+    ["Open-Meteo Best","best_match"]
+  ];
+  const now=Date.now();
+  const rows=await Promise.all(specs.map(async([name,model])=>{
+    try{
+      const d=await getJSON(forecastURL(state.lat,state.lon,model));
+      const h=d.hourly;
+      let start=h.time.findIndex(t=>new Date(t).getTime()>=now-1800000);
+      if(start<0)start=0;
+      const end=Math.min(h.time.length,start+24);
+      const vals=h.temperature_2m.slice(start,end).filter(v=>v!=null);
+      if(!vals.length)throw new Error("No 24h data");
+      const rain=h.precipitation.slice(start,end).reduce((a,b)=>a+(b||0),0);
+      const gusts=h.wind_gusts_10m.slice(start,end).filter(v=>v!=null);
+      const maxGust=gusts.length?Math.max(...gusts):null;
+      const avg=vals.reduce((a,b)=>a+b,0)/vals.length;
+      return `<tr><td><b>${name}</b></td><td>${Math.round(avg)}°F</td><td>${Math.round(Math.max(...vals))}°</td><td>${Math.round(Math.min(...vals))}°</td><td>${rain.toFixed(2)} in</td><td>${mph(maxGust)}</td><td class="ok">OK (${vals.length}h)</td></tr>`;
+    }catch(e){
+      return `<tr><td>${name}</td><td colspan="5" class="muted">Unavailable</td><td class="err">${esc(e.message)}</td></tr>`;
+    }
+  }));
+  $("models").querySelector("tbody").innerHTML=rows.join("");
+}
+
+function nwsWindToMph(obj){
+  if(!obj||obj.value==null)return"—";
+  const u=obj.unitCode||"";
+  if(u.includes("km_h"))return Math.round(obj.value*0.621371)+" mph";
+  if(u.includes("m_s"))return Math.round(obj.value*2.23694)+" mph";
+  if(u.includes("kt"))return Math.round(obj.value*1.15078)+" mph";
+  return Math.round(obj.value)+" mph";
+}
+
+async function loadObservation(){
+  $("obs").textContent="Fetching nearest NWS station…";
+  try{
+    const p=await getJSON(`https://api.weather.gov/points/${state.lat.toFixed(4)},${state.lon.toFixed(4)}`);
+    const stations=await getJSON(p.properties.observationStations);
+    const list=(stations.features||[]).slice(0,3);
+    for(const st of list){
+      try{
+        const latest=await getJSON(st.id.replace(/\/$/,"")+"/observations/latest");
+        const x=latest.properties;
+        if(!x)continue;
+        const tempF=x.temperature?.value==null?"—":Math.round(x.temperature.value*9/5+32)+"°F";
+        const dewF=x.dewpoint?.value==null?"—":Math.round(x.dewpoint.value*9/5+32)+"°F";
+        const rh=x.relativeHumidity?.value==null?"—":Math.round(x.relativeHumidity.value)+"% RH";
+        const pres=x.barometricPressure?.value==null?"—":`${Math.round(x.barometricPressure.value/100)} hPa (${(x.barometricPressure.value/3386.389).toFixed(2)} inHg)`;
+        const wind=nwsWindToMph(x.windSpeed)+(x.windDirection?.value!=null?" "+deg(x.windDirection.value):"");
+        const stName=st.properties?.name||x.station||"NWS Station";
+        const stId=st.properties?.stationIdentifier||"";
+        $("obs").innerHTML=`<b>${esc(stName)} ${stId?`(${esc(stId)})`:""}</b><br>
+          ${esc(x.textDescription||"Observed")} · <b>${tempF}</b> (Dew Pt ${dewF}) · ${rh}<br>
+          Wind: ${wind} · Pressure: ${pres}<br>
+          <span class="small muted">Observed ${x.timestamp?new Date(x.timestamp).toLocaleString():"—"}</span>`;
+        return;
+      }catch{}
+    }
+    throw new Error("No recent station report");
+  }catch(e){
+    $("obs").innerHTML=`<span class="err">NWS observation unavailable (${esc(e.message)}).</span>`;
+  }
+}
+
+// Controls & Export
+function speak(t){if(!("speechSynthesis"in window))return;speechSynthesis.cancel();speechSynthesis.speak(new SpeechSynthesisUtterance(t))}
+$("read").onclick=()=>speak($("synopsis").textContent);
+$("stop").onclick=()=>speechSynthesis.cancel();
+$("voice").onchange=()=>{if(!$("voice").checked)speechSynthesis.cancel();else speak($("synopsis").textContent)};
+$("step3").onclick=()=>{state.hourlyStep=3;renderHourly()};
+$("step1").onclick=()=>{state.hourlyStep=1;renderHourly()};
+$("update").onclick=load;
+$("zip").onchange=()=>{state.zip=$("zip").value;load()};
+$("gps").onclick=()=>navigator.geolocation?.getCurrentPosition(p=>{
+  state.zip="";
+  state.lat=p.coords.latitude;state.lon=p.coords.longitude;
+  state.place=`GPS (${state.lat.toFixed(4)}, ${state.lon.toFixed(4)})`;
+  load();
+},()=>alert("GPS unavailable or permission denied."));
+
+$("share").onclick=async()=>{
+  const hash=state.zip?`#zip=${encodeURIComponent(state.zip)}`:`#lat=${state.lat.toFixed(4)}&lon=${state.lon.toFixed(4)}`;
+  const u=location.href.split("#")[0]+hash;
+  try{await navigator.share({title:"Blue Water Weather Command",url:u})}
+  catch{await navigator.clipboard?.writeText(u);alert("Share link copied.")}
+};
+
+$("csv").onclick=()=>{
+  if(!state.data)return;
+  const h=state.data.hourly;
+  let s="time,temperature_f,feels_f,dew_point_f,precip_probability,precip_in,cloud_pct,wind_mph,gust_mph,wind_dir,cape,weather_code\n";
+  for(let i=0;i<h.time.length;i++){
+    s+=`${h.time[i]},${h.temperature_2m[i]},${h.apparent_temperature[i]},${h.dew_point_2m[i]??""},${h.precipitation_probability[i]??""},${h.precipitation[i]??""},${h.cloud_cover[i]??""},${h.wind_speed_10m[i]??""},${h.wind_gusts_10m[i]??""},${h.wind_direction_10m[i]??""},${h.cape[i]??""},${h.weather_code[i]??""}\n`;
+  }
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([s],{type:"text/csv"}));
+  a.download=`blue-water-${state.zip||"gps"}-forecast.csv`;
+  a.click();
+};
+
+// Navigation & Animated Radar
+$("nav").onclick=e=>{
+  const b=e.target.closest("button[data-tab]");if(!b)return;
+  document.querySelectorAll("nav button").forEach(x=>x.classList.remove("active"));b.classList.add("active");
+  document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));$(b.dataset.tab).classList.add("active");
+  if(b.dataset.tab==="radar")setTimeout(initMap,50);
+};
+
+let map,marker,radarLayer,radarFrames=[],radarHost="",radarIdx=0,radarTimer=null;
+function updateMapPin(){
+  if(!map||!marker)return;
+  map.setView([state.lat,state.lon],map.getZoom());
+  marker.setLatLng([state.lat,state.lon]).setPopupContent(esc(state.place));
+}
+async function initMap(){
+  if(map){map.invalidateSize();updateMapPin();return}
+  map=L.map("map").setView([state.lat,state.lon],8);
+  L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",{
+    attribution:"© OpenStreetMap · © CARTO · Radar: RainViewer",maxZoom:18
+  }).addTo(map);
+  marker=L.marker([state.lat,state.lon]).addTo(map).bindPopup(esc(state.place)).openPopup();
+  await refreshRadar();
+}
+function showRadarFrame(idx){
+  if(!map||!radarFrames.length)return;
+  radarIdx=((idx%radarFrames.length)+radarFrames.length)%radarFrames.length;
+  const fr=radarFrames[radarIdx];
+  if(radarLayer)map.removeLayer(radarLayer);
+  radarLayer=L.tileLayer(`${radarHost}${fr.path}/256/{z}/{x}/{y}/2/1_1.png`,{opacity:0.68,tileSize:256,maxNativeZoom:7,maxZoom:14}).addTo(map);
+  $("radarTime").textContent="Frame: "+new Date(fr.time*1000).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"})+` (${radarIdx+1}/${radarFrames.length})`;
+}
+function stopRadarLoop(){if(radarTimer){clearInterval(radarTimer);radarTimer=null;$("radarPlay").textContent="▶ Play Loop"}}
+async function refreshRadar(){
+  if(!map)return;
+  stopRadarLoop();
+  try{
+    const j=await getJSON("https://api.rainviewer.com/public/weather-maps.json");
+    radarHost=j.host||"";
+    radarFrames=j.radar?.past||[];
+    if(radarFrames.length)showRadarFrame(radarFrames.length-1);
+  }catch{alert("RainViewer radar feed is temporarily unavailable.")}
+}
+$("radarRefresh").onclick=refreshRadar;
+$("radarStep").onclick=()=>{stopRadarLoop();showRadarFrame(radarIdx+1)};
+$("radarPlay").onclick=()=>{
+  if(radarTimer){stopRadarLoop();return}
+  if(!radarFrames.length)return;
+  $("radarPlay").textContent="⏸ Pause";
+  radarTimer=setInterval(()=>showRadarFrame(radarIdx+1),650);
+};
+
+// Spotter Log
+document.querySelectorAll("[data-report]").forEach(b=>b.onclick=()=>{
+  const a=JSON.parse(localStorage.getItem("bw_reports")||"[]");
+  a.unshift({time:new Date().toISOString(),type:b.dataset.report,place:state.place,lat:state.lat,lon:state.lon});
+  localStorage.setItem("bw_reports",JSON.stringify(a));
+  renderReports();
+});
+$("clearLog").onclick=()=>{localStorage.removeItem("bw_reports");renderReports()};
+$("exportLog").onclick=()=>{
+  const a=JSON.parse(localStorage.getItem("bw_reports")||"[]");
+  if(!a.length){alert("No reports to export.");return}
+  let s="time_utc,report_type,location,lat,lon\n"+a.map(r=>`${r.time},"${(r.type||"").replace(/"/g,'""')}","${(r.place||"").replace(/"/g,'""')}",${r.lat},${r.lon}`).join("\n")+"\n";
+  const el=document.createElement("a");el.href=URL.createObjectURL(new Blob([s],{type:"text/csv"}));el.download="skywarn-spotter-log.csv";el.click();
+};
+function renderReports(){
+  const a=JSON.parse(localStorage.getItem("bw_reports")||"[]");
+  $("reportLog").innerHTML=a.slice(0,30).map(r=>`<div class="report"><span><b>${esc(r.type)}</b><br><span class="small muted">${new Date(r.time).toLocaleString()} · ${esc(r.place||"")} (${Number(r.lat).toFixed(4)}, ${Number(r.lon).toFixed(4)})</span></span></div>`).join("")||'<p class="muted small">No reports logged.</p>';
+}
+
+// Real Upper-Level Jet Winds Calculator
+function haversineMiles(lat1,lon1,lat2,lon2){
+  const R=3958.8,r=Math.PI/180,dLat=(lat2-lat1)*r,dLon=(lon2-lon1)*r;
+  const a=Math.sin(dLat/2)**2+Math.cos(lat1*r)*Math.cos(lat2*r)*Math.sin(dLon/2)**2;
+  return 2*R*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+function bearingDeg(lat1,lon1,lat2,lon2){
+  const r=Math.PI/180,y=Math.sin((lon2-lon1)*r)*Math.cos(lat2*r);
+  const x=Math.cos(lat1*r)*Math.sin(lat2*r)-Math.sin(lat1*r)*Math.cos(lat2*r)*Math.cos((lon2-lon1)*r);
+  return (Math.atan2(y,x)*180/Math.PI+360)%360;
+}
+$("simulate").onclick=async()=>{
+  const depCode=$("dep").value.trim().toUpperCase(), arrCode=$("arr").value.trim().toUpperCase();
+  const lvl=$("fl").value, tas=Number($("airspeed").value)||515;
+  const a1=AIRPORTS[depCode], a2=AIRPORTS[arrCode];
+  const lat=a1&&a2?(a1[0]+a2[0])/2:state.lat, lon=a1&&a2?(a1[1]+a2[1])/2:state.lon;
+  $("flightResult").textContent="Fetching live GFS upper-air wind data…";
+  try{
+    const url=`https://api.open-meteo.com/v1/forecast?latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}&hourly=wind_speed_${lvl},wind_direction_${lvl},temperature_${lvl}&wind_speed_unit=mph&temperature_unit=fahrenheit&timezone=America%2FDetroit&forecast_days=1&models=gfs_seamless`;
+    const j=await getJSON(url);
+    const now=Date.now();
+    let idx=j.hourly.time.findIndex(t=>new Date(t).getTime()>=now-1800000);if(idx<0)idx=0;
+    const wspd=j.hourly[`wind_speed_${lvl}`][idx], wdir=j.hourly[`wind_direction_${lvl}`][idx], wtemp=j.hourly[`temperature_${lvl}`][idx];
+    if(a1&&a2){
+      const dist=haversineMiles(a1[0],a1[1],a2[0],a2[1]);
+      const course=bearingDeg(a1[0],a1[1],a2[0],a2[1]);
+      // Wind blows FROM wdir, so tailwind is -cos(course - wdir)
+      const tail=Math.round(-wspd*Math.cos((course-wdir)*Math.PI/180));
+      const gs=Math.max(100,tas+tail);
+      const mins=Math.round((dist/gs)*60);
+      $("flightResult").innerHTML=`<b>${esc(depCode)} → ${esc(arrCode)}</b> (${Math.round(dist)} mi, track ${Math.round(course)}°) at <b>${lvl}</b>: Midpoint jet wind <b>${Math.round(wspd)} mph from ${deg(wdir)} (${Math.round(wdir)}°)</b>, OAT ${f(wtemp)}. Net component: <b>${tail>=0?"+"+tail+" mph tailwind":Math.abs(tail)+" mph headwind"}</b> → Est. groundspeed <b>${gs} mph</b> (~${Math.floor(mins/60)}h ${mins%60}m en route).`;
+    }else{
+      $("flightResult").innerHTML=`Live <b>${lvl}</b> wind over ${esc(state.place)}: <b>${Math.round(wspd)} mph from ${deg(wdir)} (${Math.round(wdir)}°)</b>, temp ${f(wtemp)}. Enter two supported IATA codes (e.g. DTW → OKC or ORD) for route headwind/tailwind math.`;
+    }
+  }catch(e){
+    $("flightResult").innerHTML=`<span class="err">Upper-air wind fetch failed (${esc(e.message)}).</span>`;
+  }
+};
+
+// GDD Estimator
+$("calcGdd").onclick=()=>{
+  const base=Number($("base").value),cut=Number($("cutoff").value);
+  const start=$("season").value?new Date($("season").value+"T00:00"):new Date();
+  const d=state.data?.daily;if(!d)return;
+  let cum=0,rows=[];
+  for(let i=0;i<d.time.length;i++){
+    const dt=new Date(d.time[i]+"T12:00");if(dt<start)continue;
+    const hi=Math.min(cut,Math.max(base,d.temperature_2m_max[i]));
+    const lo=Math.min(cut,Math.max(base,d.temperature_2m_min[i]));
+    const g=Math.max(0,(hi+lo)/2-base);
+    cum+=g;
+    rows.push(`${dt.toLocaleDateString(undefined,{month:"numeric",day:"numeric"})}: +${g.toFixed(1)}`);
+  }
+  $("gddResult").textContent=`Forecast-window GDD (base ${base}°F): ${cum.toFixed(1)} total (${rows.join(" · ")})`;
+};
+
+// Init
+$("season").value=new Date().toISOString().slice(0,10);
+renderReports();
+if(location.hash.startsWith("#zip=")){
+  const z=decodeURIComponent(location.hash.slice(5));
+  if(ZIPS[z]){$("zip").value=z;state.zip=z}
+}else if(location.hash.startsWith("#lat=")){
+  const p=new URLSearchParams(location.hash.slice(1));
+  const la=Number(p.get("lat")),lo=Number(p.get("lon"));
+  if(!Number.isNaN(la)&&!Number.isNaN(lo)){state.zip="";state.lat=la;state.lon=lo;state.place=`Shared Pin (${la.toFixed(4)}, ${lo.toFixed(4)})`}
+}
+load();
+</script>
+</body>
+</html>
